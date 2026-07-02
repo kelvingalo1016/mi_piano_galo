@@ -846,19 +846,7 @@ while not pr.window_should_close():
             
         draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale), font_sz, lbl_color)
         
-        # Draw keyboard key shortcut (High contrast!)
-        char_sz = max(8, int(11 * ui_scale))
-        char_lbl = wk["key"].upper()
-        char_w = measure_text_modern_width(char_lbl, char_sz)
-        
-        if is_shaking:
-            char_color = pr.WHITE
-        elif is_active:
-            char_color = pr.Color(15, 23, 42, 180) # Semi-transparent dark slate
-        else:
-            char_color = pr.Color(120, 120, 120, 255) # Slate gray
-            
-        draw_text_modern(char_lbl, int(rect.x + rect.width / 2 - char_w // 2), int(rect.y + 15 * ui_scale), char_sz, char_color)
+
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == wk["note"]:
@@ -922,12 +910,7 @@ while not pr.window_should_close():
             
         draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 20 * ui_scale), font_sz, lbl_color)
         
-        # Keyboard shortcut key
-        char_sz = max(7, int(8 * ui_scale))
-        char_lbl = bk["key"].upper()
-        char_w = measure_text_modern_width(char_lbl, char_sz)
-        char_color = pr.Color(15, 23, 42, 180) if is_active else pr.Color(150, 150, 150, 255)
-        draw_text_modern(char_lbl, int(rect.x + rect.width // 2 - char_w // 2), int(rect.y + 12 * ui_scale), char_sz, char_color)
+
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == bk["note"]:
