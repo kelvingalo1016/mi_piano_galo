@@ -1,13 +1,131 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vite-app</title>
+    <title>Mi Piano Galo</title>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body class="bg-neutral-950 text-white font-sans overflow-x-hidden min-h-screen select-none">
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+      <div class="text-center space-y-6 max-w-md px-6">
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight text-white">
+          MI PIANO <span class="text-sky-500">GALO</span>
+        </h1>
+        <div class="relative w-64 h-1.5 bg-neutral-800 rounded-full overflow-hidden mx-auto">
+          <div id="loading-bar" class="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-300"></div>
+        </div>
+        <p id="loading-status" class="text-neutral-400 text-sm font-medium animate-pulse">
+          Cargando muestras de sonido...
+        </p>
+      </div>
+    </div>
+
+    <!-- Main App Container -->
+    <main class="max-w-[1500px] mx-auto px-4 py-6 md:py-10 space-y-6 flex flex-col min-h-screen justify-between">
+      
+      <!-- Top Header / Controls Panel -->
+      <div class="bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-neutral-800 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
+            🎹
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white leading-none">Mi Piano Galo</h1>
+            <p class="text-xs text-neutral-400 mt-1">Aprende tocando tus canciones favoritas</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Song Selector -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Canción</span>
+            <select id="song-select" class="bg-neutral-950 border border-neutral-800 text-neutral-200 rounded-xl px-4 py-2 text-sm font-medium outline-none focus:border-neutral-700 transition-colors">
+              <option value="none">Ninguna (Libre)</option>
+              <option value="twinkle">Estrellita Dónde Estás</option>
+              <option value="joy">Himno a la Alegría</option>
+              <option value="birthday">Cumpleaños Feliz</option>
+            </select>
+          </div>
+
+          <!-- Stats Container -->
+          <div id="stats-container" class="hidden flex items-center gap-4 bg-neutral-950/80 border border-neutral-800 rounded-xl px-4 py-2 text-sm">
+            <div class="flex items-center gap-1.5">
+              <span class="text-neutral-400 font-medium">Puntos:</span>
+              <span id="stat-score" class="font-bold text-white">0</span>
+            </div>
+            <div class="h-4 w-px bg-neutral-800"></div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-neutral-400 font-medium">Combo:</span>
+              <span id="stat-combo" class="font-bold text-sky-400">0</span>
+              <span class="text-xs text-neutral-500">(Máx: <span id="stat-max-combo">0</span>)</span>
+            </div>
+            <div class="h-4 w-px bg-neutral-800"></div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-neutral-400 font-medium">Fallos:</span>
+              <span id="stat-mistakes" class="font-bold text-red-500">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Falling Notes Visualizer (Canvas) -->
+      <div id="visualizer-container" class="hidden w-full bg-neutral-950 rounded-2xl border border-neutral-800 shadow-md relative overflow-hidden flex items-center justify-center mx-auto mb-2 h-[220px]">
+        <canvas id="visualizer-canvas" class="block w-full h-full"></canvas>
+      </div>
+
+      <!-- Piano Keyboard Container -->
+      <div id="keyboard-container" class="w-full relative flex select-none justify-center px-1 overflow-x-auto select-none py-4">
+        <!-- Dynamic keys will be injected here -->
+      </div>
+
+    </main>
+
+    <!-- Celebration Modal (Hidden by Default) -->
+    <div id="celebration-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="bg-neutral-950/95 border border-neutral-800/50 rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-[0_0_30px_rgba(255,255,255,0.2)] transform scale-95 transition-transform duration-300">
+        
+        <!-- Trophy icon with floating glow effect -->
+        <div class="relative w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-br from-yellow-400 to-amber-600 rounded-3xl shadow-xl shadow-yellow-500/10">
+          <div class="absolute inset-0 rounded-3xl bg-yellow-500/20 blur-md animate-pulse"></div>
+          <span class="text-5xl relative z-10 animate-bounce">🏆</span>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="text-2xl font-black text-white">¡Canción Completada!</h2>
+          <p class="text-sm text-neutral-400">Has finalizado la lección con éxito</p>
+        </div>
+
+        <!-- Rating Stars -->
+        <div id="modal-stars" class="flex justify-center gap-2 text-3xl">
+          <!-- Dynamically injected stars e.g. ⭐⭐⭐ -->
+        </div>
+
+        <!-- Stats Breakdown -->
+        <div class="bg-neutral-900/50 rounded-2xl p-4 space-y-2 border border-neutral-850 text-sm">
+          <div class="flex justify-between">
+            <span class="text-neutral-400">Puntuación Final:</span>
+            <span id="modal-score" class="font-bold text-white">0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-neutral-400">Combo Máximo:</span>
+            <span id="modal-max-combo" class="font-bold text-sky-400">0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-neutral-400">Total de Fallos:</span>
+            <span id="modal-mistakes" class="font-bold text-red-500">0</span>
+          </div>
+        </div>
+
+        <button id="modal-accept-btn" class="w-full bg-white hover:bg-neutral-100 text-black py-4 px-6 rounded-2xl font-bold transition-all duration-200 shadow-lg shadow-white/5 active:scale-[0.98]">
+          Aceptar
+        </button>
+      </div>
+    </div>
+
+    <!-- Script entry point -->
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
