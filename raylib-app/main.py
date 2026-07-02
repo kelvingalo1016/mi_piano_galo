@@ -14,32 +14,13 @@ pr.init_audio_device()
 # Resolve paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 AUDIO_DIR = os.path.join(SCRIPT_DIR, "..", "public", "audio", "piano")
-FONT_PATH = os.path.join(SCRIPT_DIR, "Inter-Bold.ttf")
+FONT_PATH = os.path.join(SCRIPT_DIR, "Inter-Bold", "Inter (TTF)", "Inter-Bold.ttf")
 
 # Modern Font Downloader and Loader
 custom_font = None
 
 def init_font():
     global custom_font
-    if not os.path.exists(FONT_PATH):
-        # Draw a quick loading message with default font first
-        pr.begin_drawing()
-        pr.clear_background(pr.Color(10, 10, 10, 255))
-        pr.draw_text("Descargando fuente tipográfica premium (Inter)...", 50, 100, 20, pr.WHITE)
-        pr.end_drawing()
-        
-        try:
-            # Download from official google fonts raw repository
-            font_url = "https://github.com/google/fonts/raw/main/ofl/inter/static/Inter-Bold.ttf"
-            # Using urllib with a 5-second timeout for offline safety
-            req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=5) as response:
-                with open(FONT_PATH, 'wb') as out_file:
-                    out_file.write(response.read())
-            print("Font downloaded successfully.")
-        except Exception as e:
-            print("Failed to download custom font (offline fallback):", e)
-            
     if os.path.exists(FONT_PATH):
         try:
             # Load with size 64 for high fidelity and crisp scaling
@@ -48,6 +29,8 @@ def init_font():
             print("Loaded TTF font successfully.")
         except Exception as e:
             print("Failed to load TTF font:", e)
+    else:
+        print(f"Font file not found at {FONT_PATH}")
 
 # Trigger font initialization
 init_font()
@@ -895,26 +878,26 @@ while not pr.window_should_close():
             b_offset = 2
             
         # Draw Key body
-        pr.draw_rectangle_gradient_v(int(rect.x - rect.width // 2), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
+        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
         # Draw Key bottom border
-        pr.draw_rectangle_gradient_v(int(rect.x - rect.width // 2), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(20, 20, 20, 255))
+        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(20, 20, 20, 255))
         
         # Premium 3D bevel top line highlight
-        pr.draw_line(int(rect.x - rect.width // 2), int(rect.y), int(rect.x + rect.width // 2), int(rect.y), pr.Color(255, 255, 255, 30))
+        pr.draw_line(int(rect.x), int(rect.y), int(rect.x + rect.width), int(rect.y), pr.Color(255, 255, 255, 30))
         
         # Draw key label (Premium Typography)
         font_sz = 8
         lbl = bk["note"]
         lbl_w = measure_text_modern_width(lbl, font_sz)
         lbl_color = pr.WHITE if is_active or is_shaking else pr.Color(163, 163, 163, 255)
-        draw_text_modern(lbl, int(rect.x - lbl_w // 2), int(rect.y + rect.height - 18), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 18), font_sz, lbl_color)
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == bk["note"]:
             lbl_oops = "Oops!"
             oops_w = measure_text_modern_width(lbl_oops, 14)
             oops_y = int(rect.y - (0.75 - oops_label_timer) * 60)
-            draw_text_modern(lbl_oops, int(rect.x - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
+            draw_text_modern(lbl_oops, int(rect.x + rect.width // 2 - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
 
     # --- Draw Floating Particles ---
     for p in list(particles):
