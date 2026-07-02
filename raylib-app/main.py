@@ -512,7 +512,6 @@ def draw_star(cx, cy, r_out, r_in, color):
         pr.draw_triangle(pr.Vector2(cx, cy), p1, p2, color)
 
 def draw_vector_trophy(cx, cy, scale):
-    # Draw a clean high-fidelity vector trophy using basic shapes
     # Base Pedestal shadow and body
     pr.draw_rectangle_rounded(pr.Rectangle(cx - int(35 * scale), cy + int(38 * scale), int(70 * scale), int(10 * scale)), 0.3, 4, pr.Color(23, 23, 23, 255))
     pr.draw_rectangle_rounded(pr.Rectangle(cx - int(25 * scale), cy + int(28 * scale), int(50 * scale), int(10 * scale)), 0.3, 4, pr.Color(40, 40, 40, 255))
@@ -655,8 +654,11 @@ while not pr.window_should_close():
     sw = pr.get_screen_width()
     sh = pr.get_screen_height()
     
+    # Calculate responsiveness scale factor
+    ui_scale = min(sw / 1024.0, sh / 600.0)
+    
     # Layout Coordinates
-    top_height = 80
+    top_height = int(80 * ui_scale)
     keyboard_h = int(sh * 0.35)
     visualizer_h = sh - top_height - keyboard_h - 30
     visualizer_y = top_height + 15
@@ -666,7 +668,7 @@ while not pr.window_should_close():
     active_points = []
     if pr.is_mouse_button_down(pr.MOUSE_BUTTON_LEFT):
         m_pos = pr.get_mouse_position()
-        if not (song_select_open and pr.check_collision_point_rec(m_pos, pr.Rectangle(song_select_rect.x, song_select_rect.y, song_select_rect.width, song_select_rect.height + len(SONGS)*40))):
+        if not (song_select_open and pr.check_collision_point_rec(m_pos, pr.Rectangle(song_select_rect.x, song_select_rect.y, song_select_rect.width, song_select_rect.height + len(SONGS) * int(40 * ui_scale)))):
             if not pr.check_collision_point_rec(m_pos, song_select_rect) and not (show_celebration and show_modal):
                 active_points.append(m_pos)
                 
@@ -781,7 +783,7 @@ while not pr.window_should_close():
                     if block_h > 15:
                         label = note["note"].replace("#", "s")
                         text_col = pr.Color(28, 25, 23, 255) if is_b else pr.WHITE
-                        font_sz = 11
+                        font_sz = max(9, int(11 * ui_scale))
                         text_w = measure_text_modern_width(label, font_sz)
                         draw_text_modern(label, x_coord - text_w // 2, block_y + block_h // 2 - font_sz // 2, font_sz, text_col)
 
@@ -830,12 +832,33 @@ while not pr.window_should_close():
         # Left/Right subtle border dividers
         pr.draw_line(int(rect.x), int(rect.y), int(rect.x), int(rect.y + rect.height), pr.Color(115, 115, 115, 50))
         
-        # Draw key label (Premium Typography)
-        font_sz = 12 if sw > 800 else 10
+        # Draw musical note label (High contrast!)
+        font_sz = max(9, int(13 * ui_scale))
         lbl = wk["note"]
         lbl_w = measure_text_modern_width(lbl, font_sz)
-        lbl_color = pr.WHITE if is_active or is_shaking else pr.Color(115, 115, 115, 255)
-        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 25), font_sz, lbl_color)
+        
+        if is_shaking:
+            lbl_color = pr.WHITE
+        elif is_active:
+            lbl_color = pr.Color(15, 23, 42, 255) # Dark slate/navy
+        else:
+            lbl_color = pr.Color(70, 70, 70, 255) # Dark charcoal
+            
+        draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale), font_sz, lbl_color)
+        
+        # Draw keyboard key shortcut (High contrast!)
+        char_sz = max(8, int(11 * ui_scale))
+        char_lbl = wk["key"].upper()
+        char_w = measure_text_modern_width(char_lbl, char_sz)
+        
+        if is_shaking:
+            char_color = pr.WHITE
+        elif is_active:
+            char_color = pr.Color(15, 23, 42, 180) # Semi-transparent dark slate
+        else:
+            char_color = pr.Color(120, 120, 120, 255) # Slate gray
+            
+        draw_text_modern(char_lbl, int(rect.x + rect.width / 2 - char_w // 2), int(rect.y + 15 * ui_scale), char_sz, char_color)
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == wk["note"]:
@@ -886,11 +909,25 @@ while not pr.window_should_close():
         pr.draw_line(int(rect.x), int(rect.y), int(rect.x + rect.width), int(rect.y), pr.Color(255, 255, 255, 30))
         
         # Draw key label (Premium Typography)
-        font_sz = 8
+        font_sz = max(7, int(9 * ui_scale))
         lbl = bk["note"]
         lbl_w = measure_text_modern_width(lbl, font_sz)
-        lbl_color = pr.WHITE if is_active or is_shaking else pr.Color(163, 163, 163, 255)
-        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 18), font_sz, lbl_color)
+        
+        if is_shaking:
+            lbl_color = pr.WHITE
+        elif is_active:
+            lbl_color = pr.Color(15, 23, 42, 255)
+        else:
+            lbl_color = pr.Color(200, 200, 200, 255)
+            
+        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 20 * ui_scale), font_sz, lbl_color)
+        
+        # Keyboard shortcut key
+        char_sz = max(7, int(8 * ui_scale))
+        char_lbl = bk["key"].upper()
+        char_w = measure_text_modern_width(char_lbl, char_sz)
+        char_color = pr.Color(15, 23, 42, 180) if is_active else pr.Color(150, 150, 150, 255)
+        draw_text_modern(char_lbl, int(rect.x + rect.width // 2 - char_w // 2), int(rect.y + 12 * ui_scale), char_sz, char_color)
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == bk["note"]:
@@ -915,37 +952,31 @@ while not pr.window_should_close():
     pr.draw_rectangle_rounded(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(23, 23, 23, 255))
     pr.draw_rectangle_rounded_lines(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(38, 38, 38, 255))
     
-    # Left Logo & Info
-    draw_text_modern("🎹", 25, 23, 28, pr.WHITE)
-    draw_text_modern("Mi Piano Galo", 65, 22, 18, pr.WHITE)
-    draw_text_modern("Aprende tocando tus canciones favoritas", 65, 45, 11, pr.Color(163, 163, 163, 255))
-
-    # Stats Capsule (in practice mode)
-    if selected_song_id != "none":
-        stats_x = sw - 330
-        stats_y = 25
-        stats_w = 310
-        stats_h = 36
-        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(10, 10, 10, 255))
-        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(38, 38, 38, 255))
-        
-        stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
-        font_sz = 10
-        text_w = measure_text_modern_width(stats_text, font_sz)
-        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.WHITE)
+    # Left Logo & Info (Fully responsive sizes and vertical centering)
+    logo_sz = int(28 * ui_scale)
+    title_sz = int(18 * ui_scale)
+    desc_sz = int(11 * ui_scale)
+    
+    draw_text_modern("🎹", 25, int(10 + top_height/2 - logo_sz/2), logo_sz, pr.WHITE)
+    draw_text_modern("Mi Piano Galo", int(25 + logo_sz + 10), int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
+    draw_text_modern("Aprende tocando tus canciones favoritas", int(25 + logo_sz + 10), int(10 + top_height/2 + 2), desc_sz, pr.Color(163, 163, 163, 255))
 
     # Song Select Dropdown Menu
     select_label = "Canción: "
-    select_x = sw - 560 if selected_song_id != "none" else sw - 260
-    select_y = 23
+    select_lbl_sz = int(12 * ui_scale)
+    select_lbl_w = measure_text_modern_width(select_label, select_lbl_sz)
     
-    draw_text_modern(select_label, select_x, select_y + 10, 12, pr.Color(163, 163, 163, 255))
+    # Scale select box
+    select_box_w = int(160 * ui_scale)
+    select_box_h = int(32 * ui_scale)
     
-    # Draw select box
-    select_box_w = 160
-    select_box_h = 32
-    select_box_x = select_x + measure_text_modern_width(select_label, 12) + 5
-    song_select_rect = pr.Rectangle(select_box_x, select_y, select_box_w, select_box_h)
+    # Position select box
+    select_x = sw - select_box_w - select_lbl_w - 40
+    select_y = int(10 + top_height/2 - select_box_h/2)
+    
+    draw_text_modern(select_label, select_x, select_y + int(select_box_h/2 - select_lbl_sz/2), select_lbl_sz, pr.Color(163, 163, 163, 255))
+    
+    song_select_rect = pr.Rectangle(select_x + select_lbl_w + 5, select_y, select_box_w, select_box_h)
     
     pr.draw_rectangle_rounded(song_select_rect, 0.3, 4, pr.Color(10, 10, 10, 255))
     pr.draw_rectangle_rounded_lines(song_select_rect, 0.3, 4, pr.Color(38, 38, 38, 255))
@@ -959,9 +990,25 @@ while not pr.window_should_close():
     elif selected_song_id == "birthday":
         sel_song_title = "Cumpleaños"
         
-    draw_text_modern(sel_song_title, int(song_select_rect.x + 10), int(song_select_rect.y + 9), 11, pr.WHITE)
-    draw_text_modern("v", int(song_select_rect.x + select_box_w - 20), int(song_select_rect.y + 9), 11, pr.Color(163, 163, 163, 255))
+    title_sz = int(11 * ui_scale)
+    draw_text_modern(sel_song_title, int(song_select_rect.x + 10 * ui_scale), int(song_select_rect.y + select_box_h/2 - title_sz/2), title_sz, pr.WHITE)
+    draw_text_modern("v", int(song_select_rect.x + select_box_w - 20 * ui_scale), int(song_select_rect.y + select_box_h/2 - title_sz/2), title_sz, pr.Color(163, 163, 163, 255))
     
+    # Stats Capsule (in practice mode)
+    if selected_song_id != "none":
+        stats_w = int(310 * ui_scale)
+        stats_h = int(36 * ui_scale)
+        stats_x = select_x - stats_w - 20
+        stats_y = int(10 + top_height/2 - stats_h/2)
+        
+        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(10, 10, 10, 255))
+        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(38, 38, 38, 255))
+        
+        stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
+        font_sz = int(10 * ui_scale)
+        text_w = measure_text_modern_width(stats_text, font_sz)
+        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.WHITE)
+
     # Check click on select box
     m_pos = pr.get_mouse_position()
     if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
@@ -970,8 +1017,9 @@ while not pr.window_should_close():
         elif song_select_open:
             # Check options selection
             options = ["none", "twinkle", "joy", "birthday"]
+            opt_h = int(40 * ui_scale)
             for i, opt in enumerate(options):
-                opt_rect = pr.Rectangle(select_box_x, select_y + select_box_h + i * 40, select_box_w, 40)
+                opt_rect = pr.Rectangle(song_select_rect.x, song_select_rect.y + song_select_rect.height + i * opt_h, song_select_rect.width, opt_h)
                 if pr.check_collision_point_rec(m_pos, opt_rect):
                     handle_song_change(opt)
                     song_select_open = False
@@ -988,20 +1036,23 @@ while not pr.window_should_close():
             {"id": "birthday", "title": "Cumpleaños"}
         ]
         
-        dropdown_h = len(options) * 40
-        # Glassmorphic solid backglow
-        pr.draw_rectangle(int(select_box_x), int(select_y + select_box_h), select_box_w, dropdown_h, pr.Color(15, 15, 15, 250))
-        pr.draw_rectangle_lines(int(select_box_x), int(select_y + select_box_h), select_box_w, dropdown_h, pr.Color(38, 38, 38, 255))
+        opt_h = int(40 * ui_scale)
+        dropdown_h = len(options) * opt_h
+        dropdown_x = select_x + select_lbl_w + 5
+        dropdown_y = select_y + select_box_h
+        
+        pr.draw_rectangle(int(dropdown_x), int(dropdown_y), select_box_w, dropdown_h, pr.Color(15, 15, 15, 250))
+        pr.draw_rectangle_lines(int(dropdown_x), int(dropdown_y), select_box_w, dropdown_h, pr.Color(38, 38, 38, 255))
         
         for i, opt in enumerate(options):
-            opt_rect = pr.Rectangle(select_box_x, select_y + select_box_h + i * 40, select_box_w, 40)
+            opt_rect = pr.Rectangle(dropdown_x, dropdown_y + i * opt_h, select_box_w, opt_h)
             is_hovered = pr.check_collision_point_rec(m_pos, opt_rect)
             
             # Hover backglow
             if is_hovered:
                 pr.draw_rectangle_rec(opt_rect, pr.Color(26, 26, 26, 255))
                 
-            draw_text_modern(opt["title"], int(opt_rect.x + 10), int(opt_rect.y + 14), 11, pr.WHITE)
+            draw_text_modern(opt["title"], int(opt_rect.x + 10 * ui_scale), int(opt_rect.y + opt_h/2 - title_sz/2), title_sz, pr.WHITE)
             pr.draw_line(int(opt_rect.x), int(opt_rect.y + opt_rect.height), int(opt_rect.x + opt_rect.width), int(opt_rect.y + opt_rect.height), pr.Color(23, 23, 23, 100))
 
     # --- Draw Celebration Overlay & Modal ---
@@ -1010,8 +1061,8 @@ while not pr.window_should_close():
         pr.draw_rectangle(0, 0, sw, sh, pr.Color(0, 0, 0, 215)) # 85% opacity
         
         # Modal card dimensions
-        modal_w = 360
-        modal_h = 430
+        modal_w = int(360 * ui_scale)
+        modal_h = int(430 * ui_scale)
         modal_x = sw // 2 - modal_w // 2
         modal_y = sh // 2 - modal_h // 2
         
@@ -1027,18 +1078,20 @@ while not pr.window_should_close():
         pr.draw_rectangle_rounded_lines(modal_rect, 0.1, 4, pr.Color(38, 38, 38, 255))
         
         # Draw Vector Trophy (Animated bouncing)
-        bounce_offset = int(math.sin(pr.get_time() * 4) * 6)
-        trophy_cy = modal_y + 65 + bounce_offset
-        draw_vector_trophy(sw // 2, trophy_cy, 1.25)
+        bounce_offset = int(math.sin(pr.get_time() * 4) * 6 * ui_scale)
+        trophy_cy = modal_y + int(65 * ui_scale) + bounce_offset
+        draw_vector_trophy(sw // 2, trophy_cy, 1.25 * ui_scale)
         
         # Title text (Premium Typography)
         title_txt = "¡Canción Completada!"
-        title_w = measure_text_modern_width(title_txt, 22)
-        draw_text_modern(title_txt, sw // 2 - title_w // 2, modal_y + 135, 22, pr.WHITE)
+        title_sz = int(22 * ui_scale)
+        title_w = measure_text_modern_width(title_txt, title_sz)
+        draw_text_modern(title_txt, sw // 2 - title_w // 2, modal_y + int(135 * ui_scale), title_sz, pr.WHITE)
         
         sub_txt = "Has finalizado la lección con éxito"
-        sub_w = measure_text_modern_width(sub_txt, 12)
-        draw_text_modern(sub_txt, sw // 2 - sub_w // 2, modal_y + 165, 12, pr.Color(163, 163, 163, 255))
+        sub_sz = int(12 * ui_scale)
+        sub_w = measure_text_modern_width(sub_txt, sub_sz)
+        draw_text_modern(sub_txt, sw // 2 - sub_w // 2, modal_y + int(165 * ui_scale), sub_sz, pr.Color(163, 163, 163, 255))
         
         # Draw Rating Stars
         current_song = next((s for s in SONGS if s["id"] == selected_song_id), None)
@@ -1051,45 +1104,47 @@ while not pr.window_should_close():
                 num_stars = 2
                 
         # Draw vector stars dynamically with pulse animations
-        star_r_out = 16
-        star_r_in = 7
-        star_spacing = 40
+        star_r_out = int(16 * ui_scale)
+        star_r_in = int(7 * ui_scale)
+        star_spacing = int(40 * ui_scale)
         star_start_x = sw // 2 - ((num_stars - 1) * star_spacing) // 2
         for s_idx in range(num_stars):
             cx = star_start_x + s_idx * star_spacing
-            cy = modal_y + 200
-            pulsing = math.sin(pr.get_time() * 5 + s_idx * 1.5) * 2
+            cy = modal_y + int(200 * ui_scale)
+            pulsing = math.sin(pr.get_time() * 5 + s_idx * 1.5) * 2 * ui_scale
             draw_star(cx, cy, star_r_out + pulsing, star_r_in + pulsing / 2, pr.Color(245, 158, 11, 255))
             
         # Stats breakdown container
-        breakdown_y = modal_y + 235
-        breakdown_w = modal_w - 40
-        breakdown_h = 110
-        breakdown_rect = pr.Rectangle(modal_x + 20, breakdown_y, breakdown_w, breakdown_h)
+        breakdown_y = modal_y + int(235 * ui_scale)
+        breakdown_w = modal_w - int(40 * ui_scale)
+        breakdown_h = int(110 * ui_scale)
+        breakdown_rect = pr.Rectangle(modal_x + int(20 * ui_scale), breakdown_y, breakdown_w, breakdown_h)
         
         pr.draw_rectangle_rounded(breakdown_rect, 0.15, 4, pr.Color(20, 20, 20, 255))
         pr.draw_rectangle_rounded_lines(breakdown_rect, 0.15, 4, pr.Color(38, 38, 38, 255))
         
         # Details stats texts
-        text_y = breakdown_y + 15
+        text_sz = int(12 * ui_scale)
+        text_y = breakdown_y + int(15 * ui_scale)
+        line_spacing = int(28 * ui_scale)
         
-        draw_text_modern("Puntuación Final:", int(breakdown_rect.x + 15), text_y, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Puntuación Final:", int(breakdown_rect.x + 15 * ui_scale), text_y, text_sz, pr.Color(163, 163, 163, 255))
         scr_lbl = str(score)
-        draw_text_modern(scr_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(scr_lbl, 12) - 15), text_y, 12, pr.WHITE)
+        draw_text_modern(scr_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(scr_lbl, text_sz) - 15 * ui_scale), text_y, text_sz, pr.WHITE)
         
-        draw_text_modern("Combo Máximo:", int(breakdown_rect.x + 15), text_y + 28, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Combo Máximo:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(163, 163, 163, 255))
         cmb_lbl = str(max_combo)
-        draw_text_modern(cmb_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(cmb_lbl, 12) - 15), text_y + 28, 12, pr.Color(14, 165, 233, 255))
+        draw_text_modern(cmb_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(cmb_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(14, 165, 233, 255))
         
-        draw_text_modern("Total de Fallos:", int(breakdown_rect.x + 15), text_y + 56, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Total de Fallos:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(163, 163, 163, 255))
         mst_lbl = str(mistake_count)
-        draw_text_modern(mst_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(mst_lbl, 12) - 15), text_y + 56, 12, pr.Color(239, 68, 68, 255))
+        draw_text_modern(mst_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(mst_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(239, 68, 68, 255))
         
         # Aceptar Button
-        btn_y = modal_y + 365
-        btn_w = modal_w - 40
-        btn_h = 46
-        btn_rect = pr.Rectangle(modal_x + 20, btn_y, btn_w, btn_h)
+        btn_y = modal_y + int(365 * ui_scale)
+        btn_w = modal_w - int(40 * ui_scale)
+        btn_h = int(46 * ui_scale)
+        btn_rect = pr.Rectangle(modal_x + int(20 * ui_scale), btn_y, btn_w, btn_h)
         
         btn_hovered = pr.check_collision_point_rec(m_pos, btn_rect)
         btn_col = pr.Color(240, 240, 240, 255) if btn_hovered else pr.WHITE
@@ -1097,8 +1152,9 @@ while not pr.window_should_close():
         pr.draw_rectangle_rounded(btn_rect, 0.25, 4, btn_col)
         
         btn_txt = "Aceptar"
-        btn_txt_w = measure_text_modern_width(btn_txt, 14)
-        draw_text_modern(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - 7), 14, pr.BLACK)
+        btn_txt_sz = int(14 * ui_scale)
+        btn_txt_w = measure_text_modern_width(btn_txt, btn_txt_sz)
+        draw_text_modern(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - btn_txt_sz // 2), btn_txt_sz, pr.BLACK)
         
         if btn_hovered and pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
             close_celebration_modal()
