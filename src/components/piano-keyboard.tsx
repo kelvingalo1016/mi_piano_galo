@@ -1,3 +1,4 @@
+import React from "react";
 import { PIANO_KEYS, type PianoKey } from "@/lib/keyboard-map";
 
 interface PianoKeyboardProps {
@@ -10,7 +11,7 @@ interface PianoKeyboardProps {
   mistakeNotes?: Record<string, string>;
 }
 
-export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
+const PianoKeyboardBase: React.FC<PianoKeyboardProps> = ({
   activeNotes,
   guideNotes = new Set(),
   onNotePlay,
@@ -202,4 +203,38 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     </section>
   );
 };
+
+const areKeyboardPropsEqual = (prev: PianoKeyboardProps, next: PianoKeyboardProps) => {
+  if (prev.activeNotes.size !== next.activeNotes.size) return false;
+  for (const note of prev.activeNotes) {
+    if (!next.activeNotes.has(note)) return false;
+  }
+
+  const prevGuide = prev.guideNotes ?? new Set();
+  const nextGuide = next.guideNotes ?? new Set();
+  if (prevGuide.size !== nextGuide.size) return false;
+  for (const note of prevGuide) {
+    if (!nextGuide.has(note)) return false;
+  }
+
+  if (prev.labelType !== next.labelType) return false;
+
+  const prevRainbowKeys = Object.keys(prev.rainbowNotes ?? {});
+  const nextRainbowKeys = Object.keys(next.rainbowNotes ?? {});
+  if (prevRainbowKeys.length !== nextRainbowKeys.length) return false;
+  for (const k of prevRainbowKeys) {
+    if (prev.rainbowNotes?.[k] !== next.rainbowNotes?.[k]) return false;
+  }
+
+  const prevMistakeKeys = Object.keys(prev.mistakeNotes ?? {});
+  const nextMistakeKeys = Object.keys(next.mistakeNotes ?? {});
+  if (prevMistakeKeys.length !== nextMistakeKeys.length) return false;
+  for (const k of prevMistakeKeys) {
+    if (prev.mistakeNotes?.[k] !== next.mistakeNotes?.[k]) return false;
+  }
+
+  return true;
+};
+
+export const PianoKeyboard = React.memo<PianoKeyboardProps>(PianoKeyboardBase, areKeyboardPropsEqual);
 export default PianoKeyboard;

@@ -731,7 +731,7 @@ export function App() {
             {selectedSongId !== "none" && (
               <PianoVisualizer
                 notes={activeSongNotes}
-                playbackTime={playbackTime}
+                playbackTimeRef={playbackTimeRef}
                 isPlaying={isPlaying}
                 showCelebration={showCelebration}
                 labelType={labelType}

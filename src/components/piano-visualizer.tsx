@@ -5,7 +5,7 @@ import { type NoteEvent } from "@/lib/songs-data";
 
 interface PianoVisualizerProps {
   notes: NoteEvent[];
-  playbackTime: number;
+  playbackTimeRef: React.RefObject<number>;
   isPlaying: boolean;
   timeWindow?: number; // seconds shown in the vertical window
   showCelebration?: boolean;
@@ -71,9 +71,9 @@ const CELEBRATION_COLORS = [
   0xef4444, // Red
 ];
 
-export const PianoVisualizer: React.FC<PianoVisualizerProps> = ({
+const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
   notes,
-  playbackTime,
+  playbackTimeRef,
   isPlaying,
   timeWindow = 3.0,
   showCelebration = false,
@@ -133,7 +133,6 @@ export const PianoVisualizer: React.FC<PianoVisualizerProps> = ({
   };
 
   const notesRef = useRef(notes);
-  const playbackTimeRef = useRef(playbackTime);
   const isPlayingRef = useRef(isPlaying);
   const dimensionsRef = useRef(dimensions);
   const showCelebrationRef = useRef(showCelebration);
@@ -142,10 +141,6 @@ export const PianoVisualizer: React.FC<PianoVisualizerProps> = ({
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
-
-  useEffect(() => {
-    playbackTimeRef.current = playbackTime;
-  }, [playbackTime]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -240,10 +235,11 @@ export const PianoVisualizer: React.FC<PianoVisualizerProps> = ({
           canvas: canvasRef.current!,
           width: w,
           height: h,
-          backgroundAlpha: 0, // transparent canvas to inherit parent dark styling
-          antialias: true,
-          resolution: window.devicePixelRatio || 1,
-          autoDensity: true,
+          background: '#0a0a0a', // Solid dark background for fast composting
+          backgroundAlpha: 1, 
+          antialias: false, // Turn off expensive antialiasing
+          resolution: 1, // Disable high-DPI scaling overhead on Raspberry Pi
+          autoDensity: false,
         });
 
         if (destroyed) {
@@ -570,5 +566,5 @@ export const PianoVisualizer: React.FC<PianoVisualizerProps> = ({
     </div>
   );
 };
-
+export const PianoVisualizer = React.memo<PianoVisualizerProps>(PianoVisualizerBase);
 export default PianoVisualizer;
