@@ -1,5 +1,6 @@
 import os
 import math
+import urllib.request
 import pyray as pr
 
 # Initialize Raylib Window
@@ -10,9 +11,60 @@ pr.set_target_fps(60)
 # Initialize Audio
 pr.init_audio_device()
 
-# Resolve audio folder relative to script location
+# Resolve paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 AUDIO_DIR = os.path.join(SCRIPT_DIR, "..", "public", "audio", "piano")
+FONT_PATH = os.path.join(SCRIPT_DIR, "Inter-Bold.ttf")
+
+# Modern Font Downloader and Loader
+custom_font = None
+
+def init_font():
+    global custom_font
+    if not os.path.exists(FONT_PATH):
+        # Draw a quick loading message with default font first
+        pr.begin_drawing()
+        pr.clear_background(pr.Color(10, 10, 10, 255))
+        pr.draw_text("Descargando fuente tipográfica premium (Inter)...", 50, 100, 20, pr.WHITE)
+        pr.end_drawing()
+        
+        try:
+            # Download from official google fonts raw repository
+            font_url = "https://github.com/google/fonts/raw/main/ofl/inter/static/Inter-Bold.ttf"
+            # Using urllib with a 5-second timeout for offline safety
+            req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                with open(FONT_PATH, 'wb') as out_file:
+                    out_file.write(response.read())
+            print("Font downloaded successfully.")
+        except Exception as e:
+            print("Failed to download custom font (offline fallback):", e)
+            
+    if os.path.exists(FONT_PATH):
+        try:
+            # Load with size 64 for high fidelity and crisp scaling
+            custom_font = pr.load_font_ex(FONT_PATH, 64, None, 0)
+            pr.set_texture_filter(custom_font.texture, pr.TEXTURE_FILTER_BILINEAR)
+            print("Loaded TTF font successfully.")
+        except Exception as e:
+            print("Failed to load TTF font:", e)
+
+# Trigger font initialization
+init_font()
+
+# Modern Text Wrappers for Premium Typography
+def draw_text_modern(text, x, y, size, color):
+    if custom_font:
+        pr.draw_text_ex(custom_font, text, pr.Vector2(x, y), size, 0.0, color)
+    else:
+        pr.draw_text(text, int(x), int(y), int(size), color)
+
+def measure_text_modern_width(text, size):
+    if custom_font:
+        size_vec = pr.measure_text_ex(custom_font, text, size, 0.0)
+        return int(size_vec.x)
+    else:
+        return pr.measure_text(text, int(size))
 
 # Available samples and their notes
 AVAILABLE_SAMPLES = [
@@ -285,7 +337,6 @@ modal_animation_timer = 0.0
 
 # Confetti / Visual Particles
 particles = []
-fireworks = []
 
 class VisualParticle:
     def __init__(self, x, y, color):
@@ -362,7 +413,6 @@ def handle_play_note(note):
                     update_guide_notes(current_song)
                 else:
                     # Wrong note hit!
-                    # Only register error for notes near active timing window
                     if next_note["time"] <= playback_time + 1.0:
                         mistake_count += 1
                         combo = 0
@@ -372,7 +422,7 @@ def handle_stop_note(note):
     active_notes.discard(note)
 
 def trigger_mistake(note):
-    mistakes_notes_map[note] = 0.3 # duration of shake
+    mistakes_notes_map[note] = 0.3 # shake duration
     
     # Spawn floating Oops label
     global oops_label_timer, oops_label_note
@@ -459,12 +509,11 @@ def handle_song_change(song_id):
         is_playing = True
         playback_time = 0.0
         
-        # Calculate initial guide notes
         song = next((s for s in SONGS if s["id"] == song_id), None)
         if song:
             update_guide_notes(song)
 
-# Star rendering polygon math
+# Premium Vector Drawing Helpers
 def draw_star(cx, cy, r_out, r_in, color):
     points = []
     for i in range(10):
@@ -478,6 +527,26 @@ def draw_star(cx, cy, r_out, r_in, color):
         p1 = points[i]
         p2 = points[(i + 1) % 10]
         pr.draw_triangle(pr.Vector2(cx, cy), p1, p2, color)
+
+def draw_vector_trophy(cx, cy, scale):
+    # Draw a clean high-fidelity vector trophy using basic shapes
+    # Base Pedestal shadow and body
+    pr.draw_rectangle_rounded(pr.Rectangle(cx - int(35 * scale), cy + int(38 * scale), int(70 * scale), int(10 * scale)), 0.3, 4, pr.Color(23, 23, 23, 255))
+    pr.draw_rectangle_rounded(pr.Rectangle(cx - int(25 * scale), cy + int(28 * scale), int(50 * scale), int(10 * scale)), 0.3, 4, pr.Color(40, 40, 40, 255))
+    
+    # Stem
+    pr.draw_rectangle_gradient_v(cx - int(8 * scale), cy + int(10 * scale), int(16 * scale), int(18 * scale), pr.Color(217, 119, 6, 255), pr.Color(180, 83, 9, 255))
+    
+    # Left and Right Handles
+    pr.draw_ring(pr.Vector2(cx - int(24 * scale), cy - int(10 * scale)), int(11 * scale), int(16 * scale), 90, 270, 16, pr.Color(245, 158, 11, 255))
+    pr.draw_ring(pr.Vector2(cx + int(24 * scale), cy - int(10 * scale)), int(11 * scale), int(16 * scale), -90, 90, 16, pr.Color(245, 158, 11, 255))
+    
+    # Cup Main Body
+    pr.draw_rectangle_rounded(pr.Rectangle(cx - int(25 * scale), cy - int(30 * scale), int(50 * scale), int(42 * scale)), 0.35, 4, pr.Color(245, 158, 11, 255))
+    # Cup top shading ellipse
+    pr.draw_ellipse(cx, cy - int(30 * scale), int(25 * scale), int(7 * scale), pr.Color(252, 211, 77, 255))
+    # Cup highlights
+    pr.draw_rectangle(cx - int(20 * scale), cy - int(23 * scale), int(8 * scale), int(30 * scale), pr.Color(252, 211, 77, 120))
 
 # GUI States
 song_select_open = False
@@ -500,20 +569,21 @@ while not pr.window_should_close():
         sw = pr.get_screen_width()
         sh = pr.get_screen_height()
         
-        # Draw title
-        pr.draw_text("MI PIANO GALO", sw // 2 - pr.measure_text("MI PIANO GALO", 40) // 2, sh // 2 - 80, 40, pr.WHITE)
+        # Load modern font at start if ready, else use default text
+        draw_text_modern("MI PIANO GALO", sw // 2 - measure_text_modern_width("MI PIANO GALO", 40) // 2, sh // 2 - 80, 40, pr.WHITE)
         
         # Draw loading bar
-        bar_w = 300
-        bar_h = 10
+        bar_w = 340
+        bar_h = 8
         bar_x = sw // 2 - bar_w // 2
-        bar_y = sh // 2
+        bar_y = sh // 2 - 4
         
         pr.draw_rectangle_rounded(pr.Rectangle(bar_x, bar_y, bar_w, bar_h), 1.0, 4, pr.Color(38, 38, 38, 255))
         progress_w = int(bar_w * (loading_progress / len(PIANO_KEYS)))
         pr.draw_rectangle_rounded(pr.Rectangle(bar_x, bar_y, progress_w, bar_h), 1.0, 4, pr.Color(14, 165, 233, 255))
         
-        pr.draw_text("Cargando muestras de sonido...", sw // 2 - pr.measure_text("Cargando muestras de sonido...", 16) // 2, sh // 2 + 30, 16, pr.Color(163, 163, 163, 255))
+        load_lbl = "Cargando muestras de sonido..."
+        draw_text_modern(load_lbl, sw // 2 - measure_text_modern_width(load_lbl, 16) // 2, sh // 2 + 30, 16, pr.Color(163, 163, 163, 255))
         pr.end_drawing()
         continue
         
@@ -535,7 +605,6 @@ while not pr.window_should_close():
     for item in list(scheduled_releases):
         release_time, note = item
         if now_time >= release_time:
-            # We don't strictly need to trigger release since fanfare sounds decay naturally, but we clear it
             scheduled_releases.remove(item)
             
     # Rainbow keys cascade animation
@@ -573,7 +642,6 @@ while not pr.window_should_close():
             if not next_note:
                 song_length = max(n["time"] + n["duration"] for n in current_song["notes"]) + 1.0
                 if playback_time >= song_length:
-                    # Song finished!
                     stop_song_playback()
                     show_celebration = True
                     play_celebration_fanfare()
@@ -614,7 +682,6 @@ while not pr.window_should_close():
     # Gather Touch + Mouse positions
     active_points = []
     if pr.is_mouse_button_down(pr.MOUSE_BUTTON_LEFT):
-        # Prevent mouse playing if clicking on song select dropdown
         m_pos = pr.get_mouse_position()
         if not (song_select_open and pr.check_collision_point_rec(m_pos, pr.Rectangle(song_select_rect.x, song_select_rect.y, song_select_rect.width, song_select_rect.height + len(SONGS)*40))):
             if not pr.check_collision_point_rec(m_pos, song_select_rect) and not (show_celebration and show_modal):
@@ -667,15 +734,15 @@ while not pr.window_should_close():
 
     # 4. Drawing Canvas Elements (Hardware Accelerated GPU)
     pr.begin_drawing()
-    pr.clear_background(pr.Color(10, 10, 10, 255)) # Dark background
+    pr.clear_background(pr.Color(10, 10, 10, 255)) # Premium pitch dark
 
     # --- Draw Falling Notes Visualizer Area ---
     pr.draw_rectangle(0, visualizer_y, sw, visualizer_h, pr.Color(10, 10, 10, 255))
     
-    # White key vertical guide lines
+    # White key vertical guide lines (translucent for modern look)
     w_width = sw / 21
     for i in range(1, 21):
-        pr.draw_line(int(i * w_width), visualizer_y, int(i * w_width), visualizer_y + visualizer_h, pr.Color(38, 38, 38, 255))
+        pr.draw_line(int(i * w_width), visualizer_y, int(i * w_width), visualizer_y + visualizer_h, pr.Color(38, 38, 38, 120))
         
     # Draw guides and falling blocks if a song is playing
     if is_playing and selected_song_id != "none":
@@ -683,12 +750,12 @@ while not pr.window_should_close():
         if current_song:
             time_window = 3.0
             
-            # Active note columns backglow
+            # Active note columns backglow (gorgeous transparent columns)
             for note in current_song["notes"]:
                 is_active = playback_time >= note["time"] and playback_time <= note["time"] + note["duration"]
                 if is_active:
                     x_coord, is_b, kw = get_key_x(note["note"], sw)
-                    col = pr.Color(217, 119, 6, 20) if is_b else pr.Color(2, 132, 199, 20)
+                    col = pr.Color(217, 119, 6, 25) if is_b else pr.Color(2, 132, 199, 25)
                     pr.draw_rectangle(x_coord - kw // 2, visualizer_y, kw, visualizer_h, col)
                     
             # Draw actual falling note blocks
@@ -712,30 +779,34 @@ while not pr.window_should_close():
                     block_h = max(8, bottom_y - top_y)
                     block_y = top_y
                     
-                    # Rounded rectangle drawing
+                    # Rounded rectangle drawing with border outline
                     rect = pr.Rectangle(x_coord - kw // 2, block_y, kw, block_h)
                     color = pr.Color(245, 158, 11, 255) if is_b else pr.Color(14, 165, 233, 255) # Orange or Blue
                     if not is_active:
-                        color.a = 190 # 75% opacity
+                        color.a = 180
+                    
                     pr.draw_rectangle_rounded(rect, 0.25, 4, color)
+                    
+                    # Faint outer border for contrast
+                    pr.draw_rectangle_rounded_lines(rect, 0.25, 4, pr.Color(255, 255, 255, 40))
                     
                     # Highlight outline border for active note hitting
                     if is_active:
                         pr.draw_rectangle_rounded_lines(rect, 0.25, 4, pr.WHITE)
                         
-                    # Display note name inside block
+                    # Display note name inside block (Premium Typography)
                     if block_h > 15:
                         label = note["note"].replace("#", "s")
                         text_col = pr.Color(28, 25, 23, 255) if is_b else pr.WHITE
-                        font_sz = 10
-                        text_w = pr.measure_text(label, font_sz)
-                        pr.draw_text(label, x_coord - text_w // 2, block_y + block_h // 2 - font_sz // 2, font_sz, text_col)
+                        font_sz = 11
+                        text_w = measure_text_modern_width(label, font_sz)
+                        draw_text_modern(label, x_coord - text_w // 2, block_y + block_h // 2 - font_sz // 2, font_sz, text_col)
 
     # Draw target line at bottom of visualizer
-    pr.draw_line_ex(pr.Vector2(0, visualizer_y + visualizer_h), pr.Vector2(sw, visualizer_y + visualizer_h), 3, pr.Color(64, 64, 64, 255))
+    pr.draw_line_ex(pr.Vector2(0, visualizer_y + visualizer_h), pr.Vector2(sw, visualizer_y + visualizer_h), 2, pr.Color(64, 64, 64, 255))
 
     # --- Draw Keyboard Area ---
-    # Layer 1: White Keys
+    # Layer 1: White Keys (with vertical color gradients)
     for index, wk in enumerate(white_keys):
         is_active = wk["note"] in active_notes or wk["note"] in guide_notes
         is_rainbow = active_rainbow_keys.get(wk["note"])
@@ -747,46 +818,50 @@ while not pr.window_should_close():
         if is_shaking:
             rect.x += math.sin(pr.get_time() * 50) * 4
             
-        color = pr.Color(245, 245, 245, 255) # Default white
-        border_col = pr.Color(212, 212, 212, 255) # Gray
+        color_top = pr.Color(255, 255, 255, 255) # Top white
+        color_bottom = pr.Color(230, 230, 230, 255) # Bottom gray
+        border_col = pr.Color(186, 186, 186, 255)
         b_offset = 6
         
         if is_shaking:
-            color = pr.Color(239, 68, 68, 255) # Red mistake
-            border_col = pr.Color(185, 28, 28, 255)
+            color_top = pr.Color(248, 113, 113, 255) # Red mistake top
+            color_bottom = pr.Color(220, 38, 38, 255) # Red mistake bottom
+            border_col = pr.Color(153, 27, 27, 255)
             b_offset = 2
         elif is_active:
-            color = pr.Color(14, 165, 233, 255) # Blue active
+            color_top = pr.Color(56, 189, 248, 255) # Sky active top
+            color_bottom = pr.Color(2, 132, 199, 255) # Sky active bottom
             border_col = pr.Color(3, 105, 161, 255)
             b_offset = 2
         elif is_rainbow:
-            color = is_rainbow[1]
-            border_col = pr.Color(int(color.r*0.7), int(color.g*0.7), int(color.b*0.7), 255)
+            color_top = is_rainbow[1]
+            color_bottom = pr.Color(int(color_top.r*0.7), int(color_top.g*0.7), int(color_top.b*0.7), 255)
+            border_col = pr.Color(int(color_top.r*0.5), int(color_top.g*0.5), int(color_top.b*0.5), 255)
             b_offset = 2
             
-        # Draw Key body
-        pr.draw_rectangle_rounded(pr.Rectangle(rect.x, rect.y, rect.width, rect.height - b_offset), 0.15, 4, color)
+        # Draw Key body using vertical gradient
+        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
         # Draw Key bottom border (simulate 3D depth)
-        pr.draw_rectangle_rounded(pr.Rectangle(rect.x, rect.y + rect.height - b_offset, rect.width, b_offset), 0.15, 4, border_col)
+        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(int(border_col.r*0.8), int(border_col.g*0.8), int(border_col.b*0.8), 255))
         
-        # Left/Right border dividers
-        pr.draw_line(int(rect.x), int(rect.y), int(rect.x), int(rect.y + rect.height), pr.Color(115, 115, 115, 255))
+        # Left/Right subtle border dividers
+        pr.draw_line(int(rect.x), int(rect.y), int(rect.x), int(rect.y + rect.height), pr.Color(115, 115, 115, 50))
         
-        # Draw key label
+        # Draw key label (Premium Typography)
         font_sz = 12 if sw > 800 else 10
         lbl = wk["note"]
-        lbl_w = pr.measure_text(lbl, font_sz)
+        lbl_w = measure_text_modern_width(lbl, font_sz)
         lbl_color = pr.WHITE if is_active or is_shaking else pr.Color(115, 115, 115, 255)
-        pr.draw_text(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 25), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 25), font_sz, lbl_color)
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == wk["note"]:
             lbl_oops = "Oops!"
-            oops_w = pr.measure_text(lbl_oops, 14)
+            oops_w = measure_text_modern_width(lbl_oops, 14)
             oops_y = int(rect.y - (0.75 - oops_label_timer) * 60)
-            pr.draw_text(lbl_oops, int(rect.x + rect.width // 2 - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
+            draw_text_modern(lbl_oops, int(rect.x + rect.width // 2 - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
 
-    # Layer 2: Black Keys
+    # Layer 2: Black Keys (with bevels and vertical gradients)
     for bk in black_keys:
         is_active = bk["note"] in active_notes or bk["note"] in guide_notes
         is_rainbow = active_rainbow_keys.get(bk["note"])
@@ -798,41 +873,48 @@ while not pr.window_should_close():
         if is_shaking:
             rect.x += math.sin(pr.get_time() * 50) * 4
             
-        color = pr.Color(20, 20, 20, 255) # Default black
+        color_top = pr.Color(44, 44, 44, 255) # Sleek charcoal top
+        color_bottom = pr.Color(18, 18, 18, 255) # Dark black bottom
         border_col = pr.Color(0, 0, 0, 255)
         b_offset = 6
         
         if is_shaking:
-            color = pr.Color(239, 68, 68, 255) # Red mistake
-            border_col = pr.Color(185, 28, 28, 255)
+            color_top = pr.Color(248, 113, 113, 255) # Red mistake top
+            color_bottom = pr.Color(220, 38, 38, 255) # Red mistake bottom
+            border_col = pr.Color(153, 27, 27, 255)
             b_offset = 2
         elif is_active:
-            color = pr.Color(245, 158, 11, 255) # Amber active
+            color_top = pr.Color(251, 191, 36, 255) # Amber active top
+            color_bottom = pr.Color(217, 119, 6, 255) # Amber active bottom
             border_col = pr.Color(180, 83, 9, 255)
             b_offset = 2
         elif is_rainbow:
-            color = is_rainbow[1]
-            border_col = pr.Color(int(color.r*0.7), int(color.g*0.7), int(color.b*0.7), 255)
+            color_top = is_rainbow[1]
+            color_bottom = pr.Color(int(color_top.r*0.7), int(color_top.g*0.7), int(color_top.b*0.7), 255)
+            border_col = pr.Color(int(color_top.r*0.5), int(color_top.g*0.5), int(color_top.b*0.5), 255)
             b_offset = 2
             
         # Draw Key body
-        pr.draw_rectangle_rounded(pr.Rectangle(rect.x - rect.width // 2, rect.y, rect.width, rect.height - b_offset), 0.15, 4, color)
+        pr.draw_rectangle_gradient_v(int(rect.x - rect.width // 2), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
         # Draw Key bottom border
-        pr.draw_rectangle_rounded(pr.Rectangle(rect.x - rect.width // 2, rect.y + rect.height - b_offset, rect.width, b_offset), 0.15, 4, border_col)
+        pr.draw_rectangle_gradient_v(int(rect.x - rect.width // 2), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(20, 20, 20, 255))
         
-        # Draw key label
+        # Premium 3D bevel top line highlight
+        pr.draw_line(int(rect.x - rect.width // 2), int(rect.y), int(rect.x + rect.width // 2), int(rect.y), pr.Color(255, 255, 255, 30))
+        
+        # Draw key label (Premium Typography)
         font_sz = 8
         lbl = bk["note"]
-        lbl_w = pr.measure_text(lbl, font_sz)
+        lbl_w = measure_text_modern_width(lbl, font_sz)
         lbl_color = pr.WHITE if is_active or is_shaking else pr.Color(163, 163, 163, 255)
-        pr.draw_text(lbl, int(rect.x - lbl_w // 2), int(rect.y + rect.height - 18), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x - lbl_w // 2), int(rect.y + rect.height - 18), font_sz, lbl_color)
         
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == bk["note"]:
             lbl_oops = "Oops!"
-            oops_w = pr.measure_text(lbl_oops, 14)
+            oops_w = measure_text_modern_width(lbl_oops, 14)
             oops_y = int(rect.y - (0.75 - oops_label_timer) * 60)
-            pr.draw_text(lbl_oops, int(rect.x - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
+            draw_text_modern(lbl_oops, int(rect.x - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
 
     # --- Draw Floating Particles ---
     for p in list(particles):
@@ -843,44 +925,43 @@ while not pr.window_should_close():
             particles.remove(p)
         else:
             col_hex = p.color
-            # Simple conversion of string color to pr.Color
             p_color = pr.Color(14, 165, 233, int(p.alpha * 255)) if col_hex == "#0ea5e9" else pr.Color(245, 158, 11, int(p.alpha * 255))
             pr.draw_circle(int(p.x), int(p.y), p.size, p_color)
 
-    # --- Draw Top Panel Header ---
-    pr.draw_rectangle_rounded(pr.Rectangle(10, 10, sw - 20, top_height), 0.25, 4, pr.Color(23, 23, 23, 255))
-    pr.draw_rectangle_rounded_lines(pr.Rectangle(10, 10, sw - 20, top_height), 0.25, 4, pr.Color(38, 38, 38, 255))
+    # --- Draw Top Panel Header (Premium rounded card) ---
+    pr.draw_rectangle_rounded(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(23, 23, 23, 255))
+    pr.draw_rectangle_rounded_lines(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(38, 38, 38, 255))
     
     # Left Logo & Info
-    pr.draw_text("🎹", 25, 23, 28, pr.WHITE)
-    pr.draw_text("Mi Piano Galo", 65, 22, 18, pr.WHITE)
-    pr.draw_text("Aprende tocando tus canciones favoritas", 65, 45, 11, pr.Color(163, 163, 163, 255))
+    draw_text_modern("🎹", 25, 23, 28, pr.WHITE)
+    draw_text_modern("Mi Piano Galo", 65, 22, 18, pr.WHITE)
+    draw_text_modern("Aprende tocando tus canciones favoritas", 65, 45, 11, pr.Color(163, 163, 163, 255))
 
     # Stats Capsule (in practice mode)
     if selected_song_id != "none":
-        stats_x = sw - 320
+        stats_x = sw - 330
         stats_y = 25
-        stats_w = 300
+        stats_w = 310
         stats_h = 36
-        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.3, 4, pr.Color(10, 10, 10, 255))
-        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.3, 4, pr.Color(38, 38, 38, 255))
+        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(10, 10, 10, 255))
+        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(38, 38, 38, 255))
         
         stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
         font_sz = 10
-        text_w = pr.measure_text(stats_text, font_sz)
-        pr.draw_text(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.WHITE)
+        text_w = measure_text_modern_width(stats_text, font_sz)
+        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.WHITE)
 
     # Song Select Dropdown Menu
     select_label = "Canción: "
-    select_x = sw - 540 if selected_song_id != "none" else sw - 240
+    select_x = sw - 560 if selected_song_id != "none" else sw - 260
     select_y = 23
     
-    pr.draw_text(select_label, select_x, select_y + 10, 12, pr.Color(163, 163, 163, 255))
+    draw_text_modern(select_label, select_x, select_y + 10, 12, pr.Color(163, 163, 163, 255))
     
     # Draw select box
-    select_box_w = 150
+    select_box_w = 160
     select_box_h = 32
-    select_box_x = select_x + pr.measure_text(select_label, 12) + 5
+    select_box_x = select_x + measure_text_modern_width(select_label, 12) + 5
     song_select_rect = pr.Rectangle(select_box_x, select_y, select_box_w, select_box_h)
     
     pr.draw_rectangle_rounded(song_select_rect, 0.3, 4, pr.Color(10, 10, 10, 255))
@@ -895,8 +976,8 @@ while not pr.window_should_close():
     elif selected_song_id == "birthday":
         sel_song_title = "Cumpleaños"
         
-    pr.draw_text(sel_song_title, int(song_select_rect.x + 10), int(song_select_rect.y + 10), 11, pr.WHITE)
-    pr.draw_text("v", int(song_select_rect.x + select_box_w - 20), int(song_select_rect.y + 10), 11, pr.Color(163, 163, 163, 255))
+    draw_text_modern(sel_song_title, int(song_select_rect.x + 10), int(song_select_rect.y + 9), 11, pr.WHITE)
+    draw_text_modern("v", int(song_select_rect.x + select_box_w - 20), int(song_select_rect.y + 9), 11, pr.Color(163, 163, 163, 255))
     
     # Check click on select box
     m_pos = pr.get_mouse_position()
@@ -925,7 +1006,8 @@ while not pr.window_should_close():
         ]
         
         dropdown_h = len(options) * 40
-        pr.draw_rectangle(int(select_box_x), int(select_y + select_box_h), select_box_w, dropdown_h, pr.Color(10, 10, 10, 245))
+        # Glassmorphic solid backglow
+        pr.draw_rectangle(int(select_box_x), int(select_y + select_box_h), select_box_w, dropdown_h, pr.Color(15, 15, 15, 250))
         pr.draw_rectangle_lines(int(select_box_x), int(select_y + select_box_h), select_box_w, dropdown_h, pr.Color(38, 38, 38, 255))
         
         for i, opt in enumerate(options):
@@ -934,52 +1016,48 @@ while not pr.window_should_close():
             
             # Hover backglow
             if is_hovered:
-                pr.draw_rectangle_rec(opt_rect, pr.Color(23, 23, 23, 255))
+                pr.draw_rectangle_rec(opt_rect, pr.Color(26, 26, 26, 255))
                 
-            pr.draw_text(opt["title"], int(opt_rect.x + 10), int(opt_rect.y + 15), 11, pr.WHITE)
-            pr.draw_line(int(opt_rect.x), int(opt_rect.y + opt_rect.height), int(opt_rect.x + opt_rect.width), int(opt_rect.y + opt_rect.height), pr.Color(23, 23, 23, 255))
+            draw_text_modern(opt["title"], int(opt_rect.x + 10), int(opt_rect.y + 14), 11, pr.WHITE)
+            pr.draw_line(int(opt_rect.x), int(opt_rect.y + opt_rect.height), int(opt_rect.x + opt_rect.width), int(opt_rect.y + opt_rect.height), pr.Color(23, 23, 23, 100))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
         # Translucent dark backdrop
-        pr.draw_rectangle(0, 0, sw, sh, pr.Color(0, 0, 0, 204)) # 80% opacity
+        pr.draw_rectangle(0, 0, sw, sh, pr.Color(0, 0, 0, 215)) # 85% opacity
         
         # Modal card dimensions
-        modal_w = 340
-        modal_h = 420
+        modal_w = 360
+        modal_h = 430
         modal_x = sw // 2 - modal_w // 2
         modal_y = sh // 2 - modal_h // 2
         
         modal_rect = pr.Rectangle(modal_x, modal_y, modal_w, modal_h)
         
-        # Soft white outer glow halo
+        # Premium white outer halo glow
         for glow in range(1, 15):
             glow_rect = pr.Rectangle(modal_x - glow, modal_y - glow, modal_w + glow * 2, modal_h + glow * 2)
-            pr.draw_rectangle_rounded_lines(glow_rect, 0.1, 4, pr.Color(255, 255, 255, int((15 - glow) * 1.5)))
+            pr.draw_rectangle_rounded_lines(glow_rect, 0.1, 4, pr.Color(255, 255, 255, int((15 - glow) * 1.8)))
             
-        # Draw modal card body
-        pr.draw_rectangle_rounded(modal_rect, 0.1, 4, pr.Color(10, 10, 10, 255)) # Dark black
-        pr.draw_rectangle_rounded_lines(modal_rect, 0.1, 4, pr.Color(38, 38, 38, 120))
+        # Draw modal card body (Glassmorphic dark design)
+        pr.draw_rectangle_rounded(modal_rect, 0.1, 4, pr.Color(12, 12, 12, 255))
+        pr.draw_rectangle_rounded_lines(modal_rect, 0.1, 4, pr.Color(38, 38, 38, 255))
         
-        # Trophy icon with bounce animation
-        bounce_offset = int(math.sin(pr.get_time() * 4) * 8)
-        trophy_rect = pr.Rectangle(sw // 2 - 40, modal_y + 30 + bounce_offset, 80, 80)
+        # Draw Vector Trophy (Animated bouncing)
+        bounce_offset = int(math.sin(pr.get_time() * 4) * 6)
+        trophy_cy = modal_y + 65 + bounce_offset
+        draw_vector_trophy(sw // 2, trophy_cy, 1.25)
         
-        # Trophy background circle
-        pr.draw_circle(sw // 2, int(trophy_rect.y + 40), 40, pr.Color(234, 179, 8, 25))
-        # Draw Trophy emoji
-        pr.draw_text("🏆", int(trophy_rect.x + 13), int(trophy_rect.y + 12), 48, pr.WHITE)
-        
-        # Title text
+        # Title text (Premium Typography)
         title_txt = "¡Canción Completada!"
-        title_w = pr.measure_text(title_txt, 20)
-        pr.draw_text(title_txt, sw // 2 - title_w // 2, modal_y + 130, 20, pr.WHITE)
+        title_w = measure_text_modern_width(title_txt, 22)
+        draw_text_modern(title_txt, sw // 2 - title_w // 2, modal_y + 135, 22, pr.WHITE)
         
         sub_txt = "Has finalizado la lección con éxito"
-        sub_w = pr.measure_text(sub_txt, 11)
-        pr.draw_text(sub_txt, sw // 2 - sub_w // 2, modal_y + 160, 11, pr.Color(163, 163, 163, 255))
+        sub_w = measure_text_modern_width(sub_txt, 12)
+        draw_text_modern(sub_txt, sw // 2 - sub_w // 2, modal_y + 165, 12, pr.Color(163, 163, 163, 255))
         
-        # Draw Rating Stars (⭐, ⭐⭐, ⭐⭐⭐)
+        # Draw Rating Stars
         current_song = next((s for s in SONGS if s["id"] == selected_song_id), None)
         num_stars = 1
         if current_song:
@@ -989,65 +1067,67 @@ while not pr.window_should_close():
             elif accuracy >= 80:
                 num_stars = 2
                 
-        # Draw vector stars dynamically
+        # Draw vector stars dynamically with pulse animations
         star_r_out = 16
         star_r_in = 7
         star_spacing = 40
         star_start_x = sw // 2 - ((num_stars - 1) * star_spacing) // 2
         for s_idx in range(num_stars):
             cx = star_start_x + s_idx * star_spacing
-            cy = modal_y + 195
-            # Scale pulsing
+            cy = modal_y + 200
             pulsing = math.sin(pr.get_time() * 5 + s_idx * 1.5) * 2
             draw_star(cx, cy, star_r_out + pulsing, star_r_in + pulsing / 2, pr.Color(245, 158, 11, 255))
             
         # Stats breakdown container
-        breakdown_y = modal_y + 230
+        breakdown_y = modal_y + 235
         breakdown_w = modal_w - 40
-        breakdown_h = 100
+        breakdown_h = 110
         breakdown_rect = pr.Rectangle(modal_x + 20, breakdown_y, breakdown_w, breakdown_h)
         
-        pr.draw_rectangle_rounded(breakdown_rect, 0.15, 4, pr.Color(23, 23, 23, 127))
+        pr.draw_rectangle_rounded(breakdown_rect, 0.15, 4, pr.Color(20, 20, 20, 255))
         pr.draw_rectangle_rounded_lines(breakdown_rect, 0.15, 4, pr.Color(38, 38, 38, 255))
         
         # Details stats texts
         text_y = breakdown_y + 15
         
-        pr.draw_text("Puntuación Final:", int(breakdown_rect.x + 15), text_y, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Puntuación Final:", int(breakdown_rect.x + 15), text_y, 12, pr.Color(163, 163, 163, 255))
         scr_lbl = str(score)
-        pr.draw_text(scr_lbl, int(breakdown_rect.x + breakdown_w - pr.measure_text(scr_lbl, 12) - 15), text_y, 12, pr.WHITE)
+        draw_text_modern(scr_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(scr_lbl, 12) - 15), text_y, 12, pr.WHITE)
         
-        pr.draw_text("Combo Máximo:", int(breakdown_rect.x + 15), text_y + 25, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Combo Máximo:", int(breakdown_rect.x + 15), text_y + 28, 12, pr.Color(163, 163, 163, 255))
         cmb_lbl = str(max_combo)
-        pr.draw_text(cmb_lbl, int(breakdown_rect.x + breakdown_w - pr.measure_text(cmb_lbl, 12) - 15), text_y + 25, 12, pr.Color(14, 165, 233, 255))
+        draw_text_modern(cmb_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(cmb_lbl, 12) - 15), text_y + 28, 12, pr.Color(14, 165, 233, 255))
         
-        pr.draw_text("Total de Fallos:", int(breakdown_rect.x + 15), text_y + 50, 12, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Total de Fallos:", int(breakdown_rect.x + 15), text_y + 56, 12, pr.Color(163, 163, 163, 255))
         mst_lbl = str(mistake_count)
-        pr.draw_text(mst_lbl, int(breakdown_rect.x + breakdown_w - pr.measure_text(mst_lbl, 12) - 15), text_y + 50, 12, pr.Color(239, 68, 68, 255))
+        draw_text_modern(mst_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(mst_lbl, 12) - 15), text_y + 56, 12, pr.Color(239, 68, 68, 255))
         
         # Aceptar Button
-        btn_y = modal_y + 350
+        btn_y = modal_y + 365
         btn_w = modal_w - 40
         btn_h = 46
         btn_rect = pr.Rectangle(modal_x + 20, btn_y, btn_w, btn_h)
         
         btn_hovered = pr.check_collision_point_rec(m_pos, btn_rect)
-        btn_col = pr.Color(245, 245, 245, 255) if btn_hovered else pr.WHITE
+        btn_col = pr.Color(240, 240, 240, 255) if btn_hovered else pr.WHITE
         
         pr.draw_rectangle_rounded(btn_rect, 0.25, 4, btn_col)
         
         btn_txt = "Aceptar"
-        btn_txt_w = pr.measure_text(btn_txt, 14)
-        pr.draw_text(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - 7), 14, pr.BLACK)
+        btn_txt_w = measure_text_modern_width(btn_txt, 14)
+        draw_text_modern(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - 7), 14, pr.BLACK)
         
         if btn_hovered and pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
             close_celebration_modal()
 
     pr.end_drawing()
 
-# Clean up Raylib resources on exit
+# Clean up resources on exit
 for s in loaded_sounds.values():
     pr.unload_sound(s)
+
+if custom_font:
+    pr.unload_font(custom_font)
     
 pr.close_audio_device()
 pr.close_window()
