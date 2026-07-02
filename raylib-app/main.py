@@ -336,7 +336,7 @@ class VisualParticle:
 def get_white_key_rect(index, screen_w, kb_y, kb_h):
     x_start = int(index * screen_w / 21)
     x_end = int((index + 1) * screen_w / 21)
-    return pr.Rectangle(x_start, kb_y, x_end - x_start - 1, kb_h)
+    return pr.Rectangle(x_start, kb_y, x_end - x_start - 2, kb_h)
 
 def get_black_key_rect(preceding_index, screen_w, kb_y, kb_h):
     w_width_base = screen_w / 21
@@ -838,9 +838,6 @@ while not pr.window_should_close():
         # Draw Key bottom border (simulate 3D depth)
         pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(int(border_col.r*0.8), int(border_col.g*0.8), int(border_col.b*0.8), 255))
         
-        # Draw explicit thin pitch-black outline border for visual separation (especially in rainbow mode)
-        pr.draw_rectangle_lines_ex(rect, 1.0, pr.Color(10, 10, 10, 255))
-        
 
         
         # Draw musical note label (High contrast!)
@@ -908,13 +905,14 @@ while not pr.window_should_close():
             border_col = pr.Color(int(color_top.r*0.5), int(color_top.g*0.5), int(color_top.b*0.5), 255)
             b_offset = 2
             
-        # Draw Key body
-        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
-        # Draw Key bottom border
-        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(20, 20, 20, 255))
+        # Draw black border background (very fast and batched)
+        pr.draw_rectangle(int(rect.x), int(rect.y), int(rect.width), int(rect.height), pr.Color(10, 10, 10, 255))
         
-        # Draw explicit thin pitch-black outline border for visual separation
-        pr.draw_rectangle_lines_ex(rect, 2.5, pr.Color(10, 10, 10, 255))
+        border_thickness = 2
+        # Draw Key body
+        pr.draw_rectangle_gradient_v(int(rect.x + border_thickness), int(rect.y), int(rect.width - 2 * border_thickness), int(rect.height - b_offset - border_thickness), color_top, color_bottom)
+        # Draw Key bottom border
+        pr.draw_rectangle_gradient_v(int(rect.x + border_thickness), int(rect.y + rect.height - b_offset - border_thickness), int(rect.width - 2 * border_thickness), b_offset, border_col, pr.Color(20, 20, 20, 255))
         
         # Premium 3D bevel top line highlight
         pr.draw_line(int(rect.x), int(rect.y), int(rect.x + rect.width), int(rect.y), pr.Color(255, 255, 255, 30))
