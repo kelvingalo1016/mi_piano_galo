@@ -446,13 +446,13 @@ def play_celebration_fanfare():
 
 def trigger_rainbow_cascade():
     colors = [
-        pr.Color(248, 113, 113, 255),  # Red 400
-        pr.Color(251, 146, 60, 255),   # Orange 400
-        pr.Color(251, 191, 36, 255),   # Amber 400
-        pr.Color(52, 211, 153, 255),   # Emerald 400
-        pr.Color(56, 189, 248, 255),   # Sky 400
-        pr.Color(167, 139, 250, 255),  # Violet 400
-        pr.Color(244, 114, 182, 255)   # Pink 400
+        pr.Color(30, 58, 138, 255),    # Deep Navy Blue (900)
+        pr.Color(29, 78, 216, 255),    # Royal Blue (700)
+        pr.Color(37, 99, 235, 255),    # Vibrant Blue (600)
+        pr.Color(59, 130, 246, 255),   # Electric Blue (500)
+        pr.Color(96, 165, 250, 255),   # Sky Blue (400)
+        pr.Color(56, 189, 248, 255),   # Light Sky Blue (Sky 400)
+        pr.Color(147, 197, 253, 255)   # Ice Blue (300)
     ]
     
     now = pr.get_time()
