@@ -332,23 +332,22 @@ class VisualParticle:
         self.size = pr.get_random_value(2, 5)
 
 def get_white_key_rect(index, screen_w, kb_y, kb_h):
-    w_width = screen_w / 21
-    return pr.Rectangle(index * w_width, kb_y, w_width - 1, kb_h)
+    x_start = int(index * screen_w / 21)
+    x_end = int((index + 1) * screen_w / 21)
+    return pr.Rectangle(x_start, kb_y, x_end - x_start - 1, kb_h)
 
 def get_black_key_rect(preceding_index, screen_w, kb_y, kb_h):
-    w_width = screen_w / 21
-    b_width = w_width * 0.6
-    b_height = kb_h * 0.6
-    left = (preceding_index + 1) * w_width - b_width / 2
+    w_width_base = screen_w / 21
+    b_width = int(w_width_base * 0.6)
+    b_height = int(kb_h * 0.6)
+    x_divider = int((preceding_index + 1) * screen_w / 21)
+    left = x_divider - b_width // 2
     return pr.Rectangle(left, kb_y, b_width, b_height)
 
 # Note key coordinates finder
 def get_key_x(note_name, canvas_width):
     white_keys_list = [k for k in PIANO_KEYS if not k["is_black"]]
-    total_w_keys = len(white_keys_list)
-    w_width = canvas_width / total_w_keys
-    b_width = w_width * 0.6
-
+    
     # Find the target key
     key_info = None
     for k in PIANO_KEYS:
@@ -358,16 +357,23 @@ def get_key_x(note_name, canvas_width):
             
     if not key_info:
         return 0, False, 10
+        
+    w_width_base = canvas_width / 21
+    b_width = int(w_width_base * 0.6)
 
     if not key_info["is_black"]:
         idx = white_keys_list.index(key_info)
-        return int(idx * w_width + w_width / 2), False, int(w_width)
+        x_start = int(idx * canvas_width / 21)
+        x_end = int((idx + 1) * canvas_width / 21)
+        center_x = (x_start + x_end) // 2
+        return center_x, False, x_end - x_start
     else:
         # Preceding white key placement
         target_idx = PIANO_KEYS.index(key_info)
         preceding_white_note = PIANO_KEYS[target_idx - 1]["note"]
         idx = white_keys_list.index(next(k for k in white_keys_list if k["note"] == preceding_white_note))
-        return int((idx + 1) * w_width), True, int(b_width)
+        x_divider = int((idx + 1) * canvas_width / 21)
+        return x_divider, True, b_width
 
 # Handle user key hits
 def handle_play_note(note):
@@ -830,8 +836,7 @@ while not pr.window_should_close():
         # Draw Key bottom border (simulate 3D depth)
         pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(int(border_col.r*0.8), int(border_col.g*0.8), int(border_col.b*0.8), 255))
         
-        # Left/Right subtle border dividers
-        pr.draw_line(int(rect.x), int(rect.y), int(rect.x), int(rect.y + rect.height), pr.Color(115, 115, 115, 50))
+
         
         # Draw musical note label (High contrast!)
         font_sz = max(9, int(13 * ui_scale))
