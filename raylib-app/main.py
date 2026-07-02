@@ -5,7 +5,7 @@ import pyray as pr
 
 # Initialize Raylib Window
 pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE)
-pr.init_window(1024, 600, "Mi Piano Galo")
+pr.init_window(1024, 600, "GPiano")
 pr.set_target_fps(60)
 
 # Initialize Audio
@@ -23,10 +23,12 @@ def init_font():
     global custom_font
     if os.path.exists(FONT_PATH):
         try:
-            # Load with size 64 for high fidelity and crisp scaling
-            custom_font = pr.load_font_ex(FONT_PATH, 64, None, 0)
+            # Load font with custom Spanish accent codepoints using CFFI pointer
+            codepoints_list = list(range(32, 128)) + [225, 233, 237, 243, 250, 241, 193, 201, 205, 211, 218, 209, 191, 161]
+            codepoints_arr = pr.ffi.cast('int *', pr.ffi.new('int[]', codepoints_list))
+            custom_font = pr.load_font_ex(FONT_PATH, 64, codepoints_arr, len(codepoints_list))
             pr.set_texture_filter(custom_font.texture, pr.TEXTURE_FILTER_BILINEAR)
-            print("Loaded TTF font successfully.")
+            print("Loaded TTF font with accents successfully.")
         except Exception as e:
             print("Failed to load TTF font:", e)
     else:
@@ -971,7 +973,7 @@ while not pr.window_should_close():
     desc_sz = int(11 * ui_scale)
     
     draw_text_modern("🎹", 25, int(10 + top_height/2 - logo_sz/2), logo_sz, pr.WHITE)
-    draw_text_modern("Mi Piano Galo", int(25 + logo_sz + 10), int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
+    draw_text_modern("GPiano", int(25 + logo_sz + 10), int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
     draw_text_modern("Aprende tocando tus canciones favoritas", int(25 + logo_sz + 10), int(10 + top_height/2 + 2), desc_sz, pr.Color(163, 163, 163, 255))
 
     # Song Select Dropdown Menu
