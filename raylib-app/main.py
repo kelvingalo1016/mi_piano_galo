@@ -25,8 +25,8 @@ def init_font():
         try:
             # Load font with custom Spanish accent codepoints using CFFI pointer
             codepoints_list = list(range(32, 128)) + [225, 233, 237, 243, 250, 241, 193, 201, 205, 211, 218, 209, 191, 161]
-            codepoints_arr = pr.ffi.cast('int *', pr.ffi.new('int[]', codepoints_list))
-            custom_font = pr.load_font_ex(FONT_PATH, 64, codepoints_arr, len(codepoints_list))
+            raw_arr = pr.ffi.new('int[]', codepoints_list)
+            custom_font = pr.load_font_ex(FONT_PATH, 64, pr.ffi.cast('int *', raw_arr), len(codepoints_list))
             pr.set_texture_filter(custom_font.texture, pr.TEXTURE_FILTER_BILINEAR)
             print("Loaded TTF font with accents successfully.")
         except Exception as e:
