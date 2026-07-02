@@ -18,7 +18,7 @@ export function App() {
   const [delay, setDelayState] = useState(0);
   const [instrument, setInstrumentState] = useState<"piano" | "synth" | "organ" | "guitar" | "accordion" | "marimba">("piano");
   const [sustain, setSustainState] = useState(false);
-  const [labelType, setLabelType] = useState<"key" | "note" | "none">("key");
+  const [labelType, setLabelType] = useState<"key" | "note" | "none">("note");
   const [octaveRange, setOctaveRange] = useState<"full" | "medium" | "compact">("medium");
   const [errorLog, setErrorLog] = useState<string | null>(null);
 

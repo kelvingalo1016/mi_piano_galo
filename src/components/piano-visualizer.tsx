@@ -276,6 +276,8 @@ const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
             // If the canvas is not visible or has no size, skip drawing to prevent triangulation math crashes
             if (width <= 0 || height <= 0) return;
 
+            const currentTime = playbackTimeRef?.current ?? 0;
+
             // 1. Draw grid guides for white key dividers
             const whiteWidth = width / totalWhiteKeysCount;
             graphics.beginPath();
@@ -417,7 +419,7 @@ const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
 
               // 2. Draw active note columns background glow
               notesRef.current.forEach((note) => {
-                const isActive = playbackTimeRef.current >= note.time && playbackTimeRef.current <= note.time + note.duration;
+                const isActive = currentTime >= note.time && currentTime <= note.time + note.duration;
                 if (isActive) {
                   const { x, isBlack, keyWidth } = getKeyX(note.note, width);
                   graphics.beginPath();
@@ -433,7 +435,7 @@ const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
               notesRef.current.forEach((note, idx) => {
                 // Is it visible in the window?
                 const noteEnd = note.time + note.duration;
-                const isVisible = noteEnd >= playbackTimeRef.current && note.time <= playbackTimeRef.current + timeWindow;
+                const isVisible = noteEnd >= currentTime && note.time <= currentTime + timeWindow;
 
                 const label = textLabelsRef.current[idx];
 
@@ -441,11 +443,11 @@ const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
                   const { x, isBlack, keyWidth } = getKeyX(note.note, width);
 
                   // Calculate positions
-                  let bottomY = height - ((note.time - playbackTimeRef.current) / timeWindow) * height;
-                  let topY = height - ((noteEnd - playbackTimeRef.current) / timeWindow) * height;
+                  let bottomY = height - ((note.time - currentTime) / timeWindow) * height;
+                  let topY = height - ((noteEnd - currentTime) / timeWindow) * height;
 
                   // Clamp bottomY to canvas bottom if it is currently playing
-                  const isActive = playbackTimeRef.current >= note.time && playbackTimeRef.current <= noteEnd;
+                  const isActive = currentTime >= note.time && currentTime <= noteEnd;
                   if (isActive) {
                     bottomY = height;
                     // Spawn particles at key hit point
@@ -482,7 +484,7 @@ const PianoVisualizerBase: React.FC<PianoVisualizerProps> = ({
                     label.x = x;
                     label.y = topY + rectHeight / 2;
                     // Only show text if rectHeight is tall enough to fit it cleanly
-                    label.visible = rectHeight > 14;
+                    label.visible = rectHeight > 4;
                   }
                 } else {
                   if (label && !label.destroyed) {
