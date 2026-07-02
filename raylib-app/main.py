@@ -912,7 +912,7 @@ while not pr.window_should_close():
         pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(20, 20, 20, 255))
         
         # Draw explicit thin pitch-black outline border for visual separation
-        pr.draw_rectangle_lines_ex(rect, max(1.5, 2.0 * ui_scale), pr.Color(10, 10, 10, 255))
+        pr.draw_rectangle_lines_ex(rect, 1.0, pr.Color(10, 10, 10, 255))
         
         # Premium 3D bevel top line highlight
         pr.draw_line(int(rect.x), int(rect.y), int(rect.x + rect.width), int(rect.y), pr.Color(255, 255, 255, 30))
