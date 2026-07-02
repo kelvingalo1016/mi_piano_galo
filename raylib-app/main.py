@@ -5,7 +5,7 @@ import pyray as pr
 
 # Initialize Raylib Window
 pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE)
-pr.init_window(1024, 600, "Mi Piano Galo")
+pr.init_window(1024, 600, "GPiano")
 pr.set_target_fps(60)
 
 # Initialize Audio
@@ -561,7 +561,7 @@ while not pr.window_should_close():
         sh = pr.get_screen_height()
         
         # Load modern font at start if ready, else use default text
-        draw_text_modern("MI PIANO GALO", sw // 2 - measure_text_modern_width("MI PIANO GALO", 40) // 2, sh // 2 - 80, 40, pr.WHITE)
+        draw_text_modern("GPIANO", sw // 2 - measure_text_modern_width("GPIANO", 40) // 2, sh // 2 - 80, 40, pr.WHITE)
         
         # Draw loading bar
         bar_w = 340
@@ -833,8 +833,11 @@ while not pr.window_should_close():
             border_col = pr.Color(int(color_top.r*0.5), int(color_top.g*0.5), int(color_top.b*0.5), 255)
             b_offset = 2
             
+        # Sinking Y-offset
+        y_offset = int(4 * ui_scale) if (is_active or is_shaking or is_rainbow) else 0
+
         # Draw Key body using vertical gradient
-        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y), int(rect.width), int(rect.height - b_offset), color_top, color_bottom)
+        pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + y_offset), int(rect.width), int(rect.height - b_offset - y_offset), color_top, color_bottom)
         # Draw Key bottom border (simulate 3D depth)
         pr.draw_rectangle_gradient_v(int(rect.x), int(rect.y + rect.height - b_offset), int(rect.width), b_offset, border_col, pr.Color(int(border_col.r*0.8), int(border_col.g*0.8), int(border_col.b*0.8), 255))
         
@@ -852,7 +855,7 @@ while not pr.window_should_close():
         else:
             lbl_color = pr.Color(70, 70, 70, 255) # Dark charcoal
             
-        draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale + y_offset), font_sz, lbl_color)
         
 
         
@@ -862,7 +865,7 @@ while not pr.window_should_close():
             oops_sz = max(10, int(13 * ui_scale))
             oops_w = measure_text_modern_width(lbl_oops, oops_sz)
             float_dist = (0.75 - oops_label_timer) * 80 * ui_scale
-            oops_y = int(rect.y - float_dist)
+            oops_y = int(rect.y + y_offset - float_dist)
             cap_w = oops_w + int(16 * ui_scale)
             cap_h = oops_sz + int(8 * ui_scale)
             cap_x = int(rect.x + rect.width / 2 - cap_w / 2)
@@ -908,14 +911,17 @@ while not pr.window_should_close():
         # Draw black border background (very fast and batched)
         pr.draw_rectangle(int(rect.x), int(rect.y), int(rect.width), int(rect.height), pr.Color(10, 10, 10, 255))
         
+        # Sinking Y-offset
+        y_offset = int(4 * ui_scale) if (is_active or is_shaking or is_rainbow) else 0
+
         border_thickness = 2
         # Draw Key body
-        pr.draw_rectangle_gradient_v(int(rect.x + border_thickness), int(rect.y), int(rect.width - 2 * border_thickness), int(rect.height - b_offset - border_thickness), color_top, color_bottom)
+        pr.draw_rectangle_gradient_v(int(rect.x + border_thickness), int(rect.y + y_offset), int(rect.width - 2 * border_thickness), int(rect.height - b_offset - border_thickness - y_offset), color_top, color_bottom)
         # Draw Key bottom border
         pr.draw_rectangle_gradient_v(int(rect.x + border_thickness), int(rect.y + rect.height - b_offset - border_thickness), int(rect.width - 2 * border_thickness), b_offset, border_col, pr.Color(20, 20, 20, 255))
         
-        # Premium 3D bevel top line highlight
-        pr.draw_line(int(rect.x), int(rect.y), int(rect.x + rect.width), int(rect.y), pr.Color(255, 255, 255, 30))
+        # Premium 3D bevel top line highlight (shifted down by y_offset)
+        pr.draw_line(int(rect.x + border_thickness), int(rect.y + y_offset), int(rect.x + rect.width - border_thickness), int(rect.y + y_offset), pr.Color(255, 255, 255, 30))
         
         # Draw key label (Premium Typography)
         font_sz = max(7, int(9 * ui_scale))
@@ -929,7 +935,7 @@ while not pr.window_should_close():
         else:
             lbl_color = pr.Color(200, 200, 200, 255)
             
-        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 20 * ui_scale), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 20 * ui_scale + y_offset), font_sz, lbl_color)
         
 
         
@@ -939,7 +945,7 @@ while not pr.window_should_close():
             oops_sz = max(10, int(13 * ui_scale))
             oops_w = measure_text_modern_width(lbl_oops, oops_sz)
             float_dist = (0.75 - oops_label_timer) * 80 * ui_scale
-            oops_y = int(rect.y - float_dist)
+            oops_y = int(rect.y + y_offset - float_dist)
             cap_w = oops_w + int(16 * ui_scale)
             cap_h = oops_sz + int(8 * ui_scale)
             cap_x = int(rect.x + rect.width / 2 - cap_w / 2)
@@ -970,9 +976,9 @@ while not pr.window_should_close():
     title_sz = int(18 * ui_scale)
     desc_sz = int(11 * ui_scale)
     
-    draw_text_modern("🎹", 25, int(10 + top_height/2 - logo_sz/2), logo_sz, pr.WHITE)
-    draw_text_modern("GPiano", int(25 + logo_sz + 10), int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
-    draw_text_modern("Aprende tocando tus canciones favoritas", int(25 + logo_sz + 10), int(10 + top_height/2 + 2), desc_sz, pr.Color(163, 163, 163, 255))
+    # Removed piano emoji to avoid question mark rendering
+    draw_text_modern("GPiano", 25, int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
+    draw_text_modern("Aprende tocando tus canciones favoritas", 25, int(10 + top_height/2 + 2), desc_sz, pr.Color(163, 163, 163, 255))
 
     # Song Select Dropdown Menu
     select_label = "Canción: "
