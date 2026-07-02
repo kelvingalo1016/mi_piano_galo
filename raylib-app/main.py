@@ -485,6 +485,7 @@ def handle_song_change(song_id):
     global selected_song_id, is_playing, playback_time
     selected_song_id = song_id
     reset_stats()
+    guide_notes.clear()
     
     if song_id == "none":
         is_playing = False
