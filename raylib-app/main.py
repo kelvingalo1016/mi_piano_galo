@@ -851,9 +851,18 @@ while not pr.window_should_close():
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == wk["note"]:
             lbl_oops = "Oops!"
-            oops_w = measure_text_modern_width(lbl_oops, 14)
-            oops_y = int(rect.y - (0.75 - oops_label_timer) * 60)
-            draw_text_modern(lbl_oops, int(rect.x + rect.width // 2 - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
+            oops_sz = max(10, int(13 * ui_scale))
+            oops_w = measure_text_modern_width(lbl_oops, oops_sz)
+            float_dist = (0.75 - oops_label_timer) * 80 * ui_scale
+            oops_y = int(rect.y - float_dist)
+            cap_w = oops_w + int(16 * ui_scale)
+            cap_h = oops_sz + int(8 * ui_scale)
+            cap_x = int(rect.x + rect.width / 2 - cap_w / 2)
+            cap_y = oops_y - cap_h // 2
+            alpha = int((oops_label_timer / 0.75) * 255)
+            pr.draw_rectangle_rounded(pr.Rectangle(cap_x, cap_y, cap_w, cap_h), 0.5, 4, pr.Color(220, 38, 38, alpha))
+            pr.draw_rectangle_rounded_lines(pr.Rectangle(cap_x, cap_y, cap_w, cap_h), 0.5, 4, pr.Color(153, 27, 27, int(alpha * 0.8)))
+            draw_text_modern(lbl_oops, cap_x + cap_w // 2 - oops_w // 2, cap_y + cap_h // 2 - oops_sz // 2, oops_sz, pr.Color(255, 255, 255, alpha))
 
     # Layer 2: Black Keys (with bevels and vertical gradients)
     for bk in black_keys:
@@ -915,9 +924,18 @@ while not pr.window_should_close():
         # Mistake floating oops label
         if oops_label_timer > 0 and oops_label_note == bk["note"]:
             lbl_oops = "Oops!"
-            oops_w = measure_text_modern_width(lbl_oops, 14)
-            oops_y = int(rect.y - (0.75 - oops_label_timer) * 60)
-            draw_text_modern(lbl_oops, int(rect.x + rect.width // 2 - oops_w // 2), oops_y, 14, pr.Color(239, 68, 68, 255))
+            oops_sz = max(10, int(13 * ui_scale))
+            oops_w = measure_text_modern_width(lbl_oops, oops_sz)
+            float_dist = (0.75 - oops_label_timer) * 80 * ui_scale
+            oops_y = int(rect.y - float_dist)
+            cap_w = oops_w + int(16 * ui_scale)
+            cap_h = oops_sz + int(8 * ui_scale)
+            cap_x = int(rect.x + rect.width / 2 - cap_w / 2)
+            cap_y = oops_y - cap_h // 2
+            alpha = int((oops_label_timer / 0.75) * 255)
+            pr.draw_rectangle_rounded(pr.Rectangle(cap_x, cap_y, cap_w, cap_h), 0.5, 4, pr.Color(220, 38, 38, alpha))
+            pr.draw_rectangle_rounded_lines(pr.Rectangle(cap_x, cap_y, cap_w, cap_h), 0.5, 4, pr.Color(153, 27, 27, int(alpha * 0.8)))
+            draw_text_modern(lbl_oops, cap_x + cap_w // 2 - oops_w // 2, cap_y + cap_h // 2 - oops_sz // 2, oops_sz, pr.Color(255, 255, 255, alpha))
 
     # --- Draw Floating Particles ---
     for p in list(particles):
