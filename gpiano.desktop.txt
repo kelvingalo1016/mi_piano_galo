@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=GPiano
+Comment=Iniciar GPiano al arrancar en pantalla completa
+Exec=python3 /ruta/a/tu/mi-piano-app/raylib-app/main.py
+Path=/ruta/a/tu/mi-piano-app/raylib-app/
+Terminal=false
+X-GNOME-Autostart-enabled=true
