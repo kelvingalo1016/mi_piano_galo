@@ -6,6 +6,7 @@ import pyray as pr
 # Initialize Raylib Window
 pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE)
 pr.init_window(1024, 600, "GPiano")
+pr.toggle_fullscreen()
 pr.set_target_fps(60)
 
 # Initialize Audio
