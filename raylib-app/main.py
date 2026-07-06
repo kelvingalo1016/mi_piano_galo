@@ -1277,13 +1277,14 @@ while not pr.window_should_close():
     desc_sz = int(11 * ui_scale)
     title_w = measure_text_modern_width("GPiano", title_sz)
     
-    # Check if stats capsule is needed
+    # Check if stats text is needed
     has_stats = (selected_song_id != "none")
     if has_stats:
-        stats_w = int(310 * ui_scale)
-        stats_h = int(36 * ui_scale)
+        stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
+        stats_sz = int(18 * ui_scale)
+        stats_w = measure_text_modern_width(stats_text, stats_sz)
         stats_x = sw - stats_w - 25
-        stats_y = int(top_height/2 - stats_h/2)
+        stats_y = int(top_height / 2 - stats_sz / 2)
 
     # Responsive Visibility Rules
     show_subtitle = True
@@ -1321,15 +1322,9 @@ while not pr.window_should_close():
         origin = pr.Vector2(0, 0)
         pr.draw_texture_pro(logo_texture, source_rect, dest_rect, origin, 0.0, pr.WHITE)
         
-    # Draw Stats Capsule
+    # Draw Stats Text (No container, larger size)
     if has_stats:
-        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(245, 245, 245, 255))
-        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(200, 200, 200, 255))
-        
-        stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
-        font_sz = int(10 * ui_scale)
-        text_w = measure_text_modern_width(stats_text, font_sz)
-        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.Color(30, 30, 30, 255))
+        draw_text_modern(stats_text, stats_x, stats_y, stats_sz, pr.Color(30, 30, 30, 255))
         
     # Draw Timer Countdown in Free Play Mode
     if app_state == STATE_FREE_PLAY:
