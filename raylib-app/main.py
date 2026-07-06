@@ -1277,34 +1277,24 @@ while not pr.window_should_close():
     desc_sz = int(11 * ui_scale)
     title_w = measure_text_modern_width("GPiano", title_sz)
     
-    # Volver al Menú Button Geometry
-    back_box_w = int(140 * ui_scale)
-    back_box_h = int(32 * ui_scale)
-    back_x = sw - back_box_w - 25
-    back_y = int(top_height/2 - back_box_h/2)
-    back_button_rect = pr.Rectangle(back_x, back_y, back_box_w, back_box_h)
-    
     # Check if stats capsule is needed
     has_stats = (selected_song_id != "none")
     if has_stats:
         stats_w = int(310 * ui_scale)
         stats_h = int(36 * ui_scale)
-        stats_x = back_x - stats_w - 20
+        stats_x = sw - stats_w - 25
         stats_y = int(top_height/2 - stats_h/2)
-        right_block_start_x = stats_x
-    else:
-        right_block_start_x = back_x
 
     # Responsive Visibility Rules
     show_subtitle = True
     show_title = True
     
     # Hide subtitle if space is tight
-    if sw < 1150 or (has_stats and sw < 1250):
+    if sw < 1100 or (has_stats and sw < 1200):
         show_subtitle = False
     
     # Hide title as well if space is extremely narrow
-    if sw < 850 or (has_stats and sw < 950):
+    if sw < 800 or (has_stats and sw < 900):
         show_title = False
 
     # Draw Left block (Title/Subtitle)
@@ -1330,27 +1320,6 @@ while not pr.window_should_close():
         dest_rect = pr.Rectangle(logo_x, logo_y, target_w, target_h)
         origin = pr.Vector2(0, 0)
         pr.draw_texture_pro(logo_texture, source_rect, dest_rect, origin, 0.0, pr.WHITE)
-
-    # Draw Volver al Menú Button
-    m_pos = pr.get_mouse_position()
-    back_hovered = pr.check_collision_point_rec(m_pos, back_button_rect)
-    
-    if back_hovered:
-        pr.draw_rectangle_rounded(back_button_rect, 0.3, 4, pr.Color(230, 230, 230, 255))
-    else:
-        pr.draw_rectangle_rounded(back_button_rect, 0.3, 4, pr.Color(245, 245, 245, 255))
-        
-    pr.draw_rectangle_rounded_lines(back_button_rect, 0.3, 4, pr.Color(200, 200, 200, 255))
-    
-    back_txt = "Volver al Menú"
-    back_txt_sz = int(12 * ui_scale)
-    back_txt_w = measure_text_modern_width(back_txt, back_txt_sz)
-    draw_text_modern(back_txt, int(back_button_rect.x + back_button_rect.width / 2 - back_txt_w / 2), int(back_button_rect.y + back_button_rect.height / 2 - back_txt_sz / 2), back_txt_sz, pr.Color(30, 30, 30, 255))
-    
-    # Check click on Volver button
-    if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT) and back_hovered:
-        app_state = STATE_MENU
-        handle_song_change("none")
         
     # Draw Stats Capsule
     if has_stats:
@@ -1365,9 +1334,9 @@ while not pr.window_should_close():
     # Draw Timer Countdown in Free Play Mode
     if app_state == STATE_FREE_PLAY:
         timer_text = f"Tiempo libre: {int(free_play_timer // 60)}:{int(free_play_timer % 60):02d}"
-        timer_sz = int(13 * ui_scale)
+        timer_sz = int(22 * ui_scale)
         timer_w = measure_text_modern_width(timer_text, timer_sz)
-        timer_x = back_x - timer_w - 30
+        timer_x = sw - timer_w - 25
         timer_y = int(top_height / 2 - timer_sz / 2)
         
         # Red warning pill when time is low (< 30 seconds)
