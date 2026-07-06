@@ -1280,7 +1280,7 @@ while not pr.window_should_close():
     # Check if stats text is needed
     has_stats = (selected_song_id != "none")
     if has_stats:
-        stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
+        stats_text = f"Puntos: {score}  |  Fallos: {mistake_count}"
         stats_sz = int(18 * ui_scale)
         stats_w = measure_text_modern_width(stats_text, stats_sz)
         stats_x = sw - stats_w - 25
