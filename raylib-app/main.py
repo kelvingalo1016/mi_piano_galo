@@ -4,7 +4,7 @@ import urllib.request
 import pyray as pr
 
 # Initialize Raylib Window
-pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE)
+pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE | pr.FLAG_VSYNC_HINT)
 pr.init_window(1024, 600, "GPiano")
 pr.toggle_fullscreen()
 pr.set_target_fps(60)
@@ -37,6 +37,46 @@ def init_font():
 
 # Trigger font initialization
 init_font()
+
+# Load Logo Texture
+logo_path = os.path.join(SCRIPT_DIR, "logo.png")
+logo_texture = None
+if os.path.exists(logo_path):
+    try:
+        logo_texture = pr.load_texture(logo_path)
+        print("Loaded logo texture successfully.")
+    except Exception as e:
+        print("Failed to load logo texture:", e)
+
+# Load Menu Textures (PNG icons)
+nota_path = os.path.join(SCRIPT_DIR, "iconos", "nota.png")
+flecha_izq_path = os.path.join(SCRIPT_DIR, "iconos", "flecha_izquierda.png")
+flecha_der_path = os.path.join(SCRIPT_DIR, "iconos", "flecha_derecha.png")
+
+nota_texture = None
+flecha_izq_texture = None
+flecha_der_texture = None
+
+if os.path.exists(nota_path):
+    try:
+        nota_texture = pr.load_texture(nota_path)
+        print("Loaded nota texture successfully.")
+    except Exception as e:
+        print("Failed to load nota texture:", e)
+
+if os.path.exists(flecha_izq_path):
+    try:
+        flecha_izq_texture = pr.load_texture(flecha_izq_path)
+        print("Loaded flecha_izquierda texture successfully.")
+    except Exception as e:
+        print("Failed to load flecha_izquierda texture:", e)
+
+if os.path.exists(flecha_der_path):
+    try:
+        flecha_der_texture = pr.load_texture(flecha_der_path)
+        print("Loaded flecha_derecha texture successfully.")
+    except Exception as e:
+        print("Failed to load flecha_derecha texture:", e)
 
 # Modern Text Wrappers for Premium Typography
 def draw_text_modern(text, x, y, size, color):
@@ -305,6 +345,24 @@ selected_song_id = "none"
 is_playing = False
 playback_time = 0.0
 
+# State Machine Constants and Variables
+STATE_MENU = 0
+STATE_FREE_PLAY = 1
+STATE_TUTORIAL = 2
+
+app_state = STATE_MENU
+free_play_timer = 180.0  # 3 minutes countdown
+carousel_index = 0
+current_scroll = 0.0
+target_scroll = 0.0
+
+CAROUSEL_OPTIONS = [
+    {"id": "free", "title": "Modo libre"},
+    {"id": "twinkle", "title": "Tutorial\ncanción\nEstrellita"},
+    {"id": "joy", "title": "Tutorial\ncanción\nHimno a la Alegría"},
+    {"id": "birthday", "title": "Tutorial\ncanción\nCumpleaños"}
+]
+
 # Gameplay Stats
 score = 0
 combo = 0
@@ -468,13 +526,14 @@ scheduled_rainbow = []
 active_rainbow_keys = {}
 
 def close_celebration_modal():
-    global show_celebration, show_modal, selected_song_id, is_playing
+    global show_celebration, show_modal, selected_song_id, is_playing, app_state
     show_celebration = False
     show_modal = False
     active_rainbow_keys.clear()
     selected_song_id = "none"
     is_playing = False
     handle_song_change("none")
+    app_state = STATE_MENU
 
 def stop_song_playback():
     global is_playing
@@ -539,6 +598,67 @@ def draw_vector_trophy(cx, cy, scale):
     pr.draw_ellipse(cx, cy - int(30 * scale), int(25 * scale), int(7 * scale), pr.Color(252, 211, 77, 255))
     # Cup highlights
     pr.draw_rectangle(cx - int(20 * scale), cy - int(23 * scale), int(8 * scale), int(30 * scale), pr.Color(252, 211, 77, 120))
+
+# Premium Vector Drawing Helpers for Menu
+def draw_vector_note(cx, cy, scale, color):
+    r = 14 * scale
+    # Note heads (angled ellipses)
+    pr.draw_ellipse(int(cx - 30 * scale), int(cy + 20 * scale), int(16 * scale), int(12 * scale), color)
+    pr.draw_ellipse(int(cx + 20 * scale), int(cy + 5 * scale), int(16 * scale), int(12 * scale), color)
+    
+    # Stems
+    stem_w = max(2, int(6 * scale))
+    stem_h = int(60 * scale)
+    pr.draw_rectangle(int(cx - 30 * scale + 12 * scale), int(cy + 20 * scale - stem_h), stem_w, stem_h, color)
+    pr.draw_rectangle(int(cx + 20 * scale + 12 * scale), int(cy + 5 * scale - stem_h), stem_w, stem_h, color)
+    
+    # Beam
+    p1 = pr.Vector2(cx - 30 * scale + 12 * scale, cy + 20 * scale - stem_h)
+    p2 = pr.Vector2(cx + 20 * scale + 12 * scale, cy + 5 * scale - stem_h)
+    beam_h = int(14 * scale)
+    pr.draw_line_ex(pr.Vector2(p1.x + stem_w/2, p1.y + beam_h/2), pr.Vector2(p2.x + stem_w/2, p2.y + beam_h/2), beam_h, color)
+
+def draw_vector_arrow(cx, cy, scale, is_right, color):
+    w = 20 * scale
+    h = 30 * scale
+    thickness = max(3, int(6 * scale))
+    
+    if is_right:
+        p_tip = pr.Vector2(cx + w // 2, cy)
+        p_top = pr.Vector2(cx - w // 2, cy - h // 2)
+        p_bottom = pr.Vector2(cx - w // 2, cy + h // 2)
+    else:
+        p_tip = pr.Vector2(cx - w // 2, cy)
+        p_top = pr.Vector2(cx + w // 2, cy - h // 2)
+        p_bottom = pr.Vector2(cx + w // 2, cy + h // 2)
+    pr.draw_line_ex(p_top, p_tip, thickness, color)
+    pr.draw_line_ex(p_bottom, p_tip, thickness, color)
+
+def draw_texture_centered(tex, cx, cy, w, h, color):
+    if tex:
+        source_rec = pr.Rectangle(0, 0, tex.width, tex.height)
+        dest_rec = pr.Rectangle(int(cx - w // 2), int(cy - h // 2), int(w), int(h))
+        origin = pr.Vector2(0, 0)
+        pr.draw_texture_pro(tex, source_rec, dest_rec, origin, 0.0, color)
+
+def draw_menu_note(cx, cy, scale, color):
+    if nota_texture:
+        h = int(80 * scale)
+        aspect = nota_texture.width / nota_texture.height
+        w = int(h * aspect)
+        draw_texture_centered(nota_texture, cx, cy, w, h, color)
+    else:
+        draw_vector_note(cx, cy, scale, color)
+
+def draw_menu_arrow(cx, cy, scale, is_right, color):
+    tex = flecha_der_texture if is_right else flecha_izq_texture
+    if tex:
+        h = int(40 * scale)
+        aspect = tex.width / tex.height
+        w = int(h * aspect)
+        draw_texture_centered(tex, cx, cy, w, h, color)
+    else:
+        draw_vector_arrow(cx, cy, scale, is_right, color)
 
 # GUI States
 song_select_open = False
@@ -648,6 +768,11 @@ while not pr.window_should_close():
                     next_time = next_note["time"]
                     
             playback_time = next_time
+    elif app_state == STATE_FREE_PLAY:
+        free_play_timer -= delta_time
+        if free_play_timer <= 0.0:
+            app_state = STATE_MENU
+            handle_song_change("none")
 
     # Update modal timer
     if show_celebration and not show_modal:
@@ -665,14 +790,84 @@ while not pr.window_should_close():
     sh = pr.get_screen_height()
     
     # Calculate responsiveness scale factor
+    # Calculate responsiveness scale factor
     ui_scale = min(sw / 1024.0, sh / 600.0)
     
+    # Menu Navigation logic
+    if app_state == STATE_MENU:
+        # Smooth scroll interpolation
+        if current_scroll != target_scroll:
+            current_scroll += (target_scroll - current_scroll) * 12.0 * delta_time
+            if abs(target_scroll - current_scroll) < 0.005:
+                current_scroll = target_scroll
+                
+        # Check QWERTY keyboard first (piano keys mapping)
+        if current_scroll == target_scroll:
+            if pr.is_key_pressed(pr.KEY_A):  # Left
+                target_scroll = current_scroll - 1.0
+                carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+            elif pr.is_key_pressed(pr.KEY_E):  # Right
+                target_scroll = current_scroll + 1.0
+                carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                
+        # Enter action is only processed if scroll has completed
+        if pr.is_key_pressed(pr.KEY_C) and current_scroll == target_scroll:  # Enter
+            option = CAROUSEL_OPTIONS[carousel_index]
+            if option["id"] == "free":
+                app_state = STATE_FREE_PLAY
+                free_play_timer = 180.0
+                handle_song_change("none")
+            else:
+                app_state = STATE_TUTORIAL
+                handle_song_change(option["id"])
+                
+        # Check mouse/touch clicks on carousel elements
+        if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
+            m_pos = pr.get_mouse_position()
+            
+            center_card_w = int(260 * ui_scale)
+            center_card_h = int(360 * ui_scale)
+            side_card_w = int(200 * ui_scale)
+            side_card_h = int(280 * ui_scale)
+            card_cy = sh // 2 + int(20 * ui_scale)
+            
+            left_card_x = sw // 2 - int(250 * ui_scale) - side_card_w // 2
+            center_card_x = sw // 2 - center_card_w // 2
+            right_card_x = sw // 2 + int(250 * ui_scale) - side_card_w // 2
+            
+            arrow_size = int(40 * ui_scale)
+            left_arrow_x = sw // 2 - int(420 * ui_scale)
+            right_arrow_x = sw // 2 + int(420 * ui_scale)
+            
+            left_card_rect = pr.Rectangle(left_card_x, card_cy - side_card_h // 2, side_card_w, side_card_h)
+            center_card_rect = pr.Rectangle(center_card_x, card_cy - center_card_h // 2, center_card_w, center_card_h)
+            right_card_rect = pr.Rectangle(right_card_x, card_cy - side_card_h // 2, side_card_w, side_card_h)
+            left_arrow_rect = pr.Rectangle(left_arrow_x - arrow_size // 2 - 20, card_cy - arrow_size // 2 - 20, arrow_size + 40, arrow_size + 40)
+            right_arrow_rect = pr.Rectangle(right_arrow_x - arrow_size // 2 - 20, card_cy - arrow_size // 2 - 20, arrow_size + 40, arrow_size + 40)
+            
+            if current_scroll == target_scroll:
+                if pr.check_collision_point_rec(m_pos, left_arrow_rect) or pr.check_collision_point_rec(m_pos, left_card_rect):
+                    target_scroll = current_scroll - 1.0
+                    carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                elif pr.check_collision_point_rec(m_pos, right_arrow_rect) or pr.check_collision_point_rec(m_pos, right_card_rect):
+                    target_scroll = current_scroll + 1.0
+                    carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                elif pr.check_collision_point_rec(m_pos, center_card_rect):
+                    option = CAROUSEL_OPTIONS[carousel_index]
+                    if option["id"] == "free":
+                        app_state = STATE_FREE_PLAY
+                        free_play_timer = 180.0
+                        handle_song_change("none")
+                    else:
+                        app_state = STATE_TUTORIAL
+                        handle_song_change(option["id"])
+
     # Layout Coordinates
     top_height = int(80 * ui_scale)
     keyboard_h = int(sh * 0.35)
-    visualizer_h = sh - top_height - keyboard_h - 30
-    visualizer_y = top_height + 15
     keyboard_y = sh - keyboard_h - 10
+    visualizer_y = top_height
+    visualizer_h = keyboard_y - visualizer_y
     
     # Gather Touch + Mouse positions
     active_points = []
@@ -687,7 +882,7 @@ while not pr.window_should_close():
         
     # Check notes pressed by mouse/touch
     pressed_by_touch = set()
-    if not (show_celebration and show_modal):
+    if not (show_celebration and show_modal) and app_state != STATE_MENU:
         for pt in active_points:
             # Check black keys first (overlay z-order)
             hit_black = False
@@ -717,7 +912,7 @@ while not pr.window_should_close():
     prev_pressed_notes = pressed_by_touch.copy()
 
     # Read QWERTY keyboard mappings
-    if not (show_celebration and show_modal):
+    if not (show_celebration and show_modal) and app_state != STATE_MENU:
         for key_data in PIANO_KEYS:
             char = key_data["key"]
             r_key = KEY_MAP_RAYLIB.get(char)
@@ -729,10 +924,115 @@ while not pr.window_should_close():
 
     # 4. Drawing Canvas Elements (Hardware Accelerated GPU)
     pr.begin_drawing()
+    
+    if app_state == STATE_MENU:
+        # Clear background to a very clean light gray
+        pr.clear_background(pr.Color(245, 245, 245, 255))
+        
+        # 1. Draw Title "Elige una opción:"
+        title_text = "Elige una opción:"
+        title_font_sz = int(32 * ui_scale)
+        title_w = measure_text_modern_width(title_text, title_font_sz)
+        draw_text_modern(title_text, sw // 2 - title_w // 2, int(sh * 0.15), title_font_sz, pr.BLACK)
+        
+        # 2. Dynamic card drawing loop
+        card_cy = sh // 2 + int(20 * ui_scale)
+        center_i = int(round(current_scroll))
+        
+        # Sort indices to draw furthest cards first (back-to-front z-ordering)
+        draw_indices = list(range(center_i - 2, center_i + 3))
+        draw_indices.sort(key=lambda idx: -abs(idx - current_scroll))
+        
+        for i in draw_indices:
+            opt_idx = i % len(CAROUSEL_OPTIONS)
+            opt = CAROUSEL_OPTIONS[opt_idx]
+            
+            diff = i - current_scroll
+            
+            # Skip if card is too far to be visible
+            if abs(diff) > 2.0:
+                continue
+                
+            # Size scale factor based on distance from center
+            if abs(diff) <= 1.0:
+                scale_factor = 1.0 - abs(diff) * 0.23
+            else:
+                scale_factor = 0.77 - (abs(diff) - 1.0) * 0.17
+            scale_factor = max(0.5, scale_factor)
+            
+            # Calculate coordinates as floats first, then convert using int(round()) to prevent sub-pixel jitter
+            card_cx_float = sw / 2.0 + diff * 250.0 * ui_scale
+            card_cy_float = sh / 2.0 + 20.0 * ui_scale
+            w_float = 260.0 * ui_scale * scale_factor
+            h_float = 360.0 * ui_scale * scale_factor
+            
+            card_x = int(round(card_cx_float - w_float / 2.0))
+            card_y = int(round(card_cy_float - h_float / 2.0))
+            card_w = int(round(w_float))
+            card_h = int(round(h_float))
+            
+            card_rect = pr.Rectangle(card_x, card_y, card_w, card_h)
+            
+            # Opacity/Alpha (smoothly fades out at edges)
+            if abs(diff) <= 1.0:
+                alpha = 255
+            else:
+                alpha = int(max(0, 1.0 - (abs(diff) - 1.0)) * 255)
+                
+            # Color blending: Active (diff=0) is black; Inactive (diff=1) is gray.
+            t = min(1.0, abs(diff))
+            
+            # Lerp border color
+            border_r = int(0 + t * 180)
+            border_g = int(0 + t * 180)
+            border_b = int(0 + t * 180)
+            border_color = pr.Color(border_r, border_g, border_b, alpha)
+            
+            # Border thickness (2 for center card, 1 for side cards)
+            border_thick = int(max(1, round(2 - t * 1)))
+            
+            # Lerp text/note color
+            text_r = int(0 + t * 160)
+            text_g = int(0 + t * 160)
+            text_b = int(0 + t * 160)
+            text_color = pr.Color(text_r, text_g, text_b, alpha)
+            
+            # Draw card background (White with alpha)
+            pr.draw_rectangle_rec(card_rect, pr.Color(255, 255, 255, alpha))
+            pr.draw_rectangle_lines_ex(card_rect, border_thick, border_color)
+            
+            # Draw card icon (centered in top half)
+            note_cx = int(round(card_cx_float))
+            note_cy = int(round(card_cy_float - 45.0 * ui_scale * scale_factor))
+            draw_menu_note(note_cx, note_cy, scale_factor * ui_scale, text_color)
+            
+            # Draw Text
+            opt_text = opt["title"]
+            opt_sz = int(15 * ui_scale) # Fixed font size prevents Raylib font glyph scale jittering
+            lines = opt_text.split("\n")
+            
+            # Text starts in bottom half of the card
+            text_start_y = int(round(card_cy_float + 25.0 * ui_scale * scale_factor))
+            line_height = int(round(24.0 * ui_scale * scale_factor))
+            
+            for line_idx, line in enumerate(lines):
+                lw = measure_text_modern_width(line, opt_sz)
+                draw_text_modern(line, note_cx - lw // 2, text_start_y + line_idx * line_height, opt_sz, text_color)
+                
+        # 3. Draw Left and Right Arrows
+        left_arrow_x = sw // 2 - int(420 * ui_scale)
+        right_arrow_x = sw // 2 + int(420 * ui_scale)
+        
+        draw_menu_arrow(left_arrow_x, card_cy, 1.2 * ui_scale, False, pr.BLACK)
+        draw_menu_arrow(right_arrow_x, card_cy, 1.2 * ui_scale, True, pr.BLACK)
+        
+        pr.end_drawing()
+        continue
+
     pr.clear_background(pr.Color(10, 10, 10, 255)) # Premium pitch dark
 
     # --- Draw Falling Notes Visualizer Area ---
-    pr.draw_rectangle(0, visualizer_y, sw, visualizer_h, pr.Color(10, 10, 10, 255))
+    pr.draw_rectangle(0, visualizer_y, sw, visualizer_h, pr.WHITE)
     
     # White key vertical guide lines (translucent for modern look)
     w_width = sw / 21
@@ -750,7 +1050,7 @@ while not pr.window_should_close():
                 is_active = playback_time >= note["time"] and playback_time <= note["time"] + note["duration"]
                 if is_active:
                     x_coord, is_b, kw = get_key_x(note["note"], sw)
-                    col = pr.Color(217, 119, 6, 25) if is_b else pr.Color(2, 132, 199, 25)
+                    col = pr.Color(217, 119, 6, 45) if is_b else pr.Color(2, 132, 199, 45)
                     pr.draw_rectangle(x_coord - kw // 2, visualizer_y, kw, visualizer_h, col)
                     
             # Draw actual falling note blocks
@@ -783,7 +1083,7 @@ while not pr.window_should_close():
                     pr.draw_rectangle_rounded(rect, 0.25, 4, color)
                     
                     # Faint outer border for contrast
-                    pr.draw_rectangle_rounded_lines(rect, 0.25, 4, pr.Color(255, 255, 255, 40))
+                    pr.draw_rectangle_rounded_lines(rect, 0.25, 4, pr.Color(0, 0, 0, 40))
                     
                     # Highlight outline border for active note hitting
                     if is_active:
@@ -968,112 +1268,119 @@ while not pr.window_should_close():
             p_color = pr.Color(14, 165, 233, int(p.alpha * 255)) if col_hex == "#0ea5e9" else pr.Color(245, 158, 11, int(p.alpha * 255))
             pr.draw_circle(int(p.x), int(p.y), p.size, p_color)
 
-    # --- Draw Top Panel Header (Premium rounded card) ---
-    pr.draw_rectangle_rounded(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(23, 23, 23, 255))
-    pr.draw_rectangle_rounded_lines(pr.Rectangle(10, 10, sw - 20, top_height), 0.2, 4, pr.Color(38, 38, 38, 255))
+    # --- Draw Top Panel Header (Premium sharp card with 90° corners, full-width) ---
+    pr.draw_rectangle(0, 0, sw, top_height, pr.WHITE)
+    pr.draw_line(0, top_height, sw, top_height, pr.Color(200, 200, 200, 255))
     
-    # Left Logo & Info (Fully responsive sizes and vertical centering)
-    logo_sz = int(28 * ui_scale)
-    title_sz = int(18 * ui_scale)
+    # Left Logo & Info Scale calculations
+    title_sz = int(24 * ui_scale)
     desc_sz = int(11 * ui_scale)
+    title_w = measure_text_modern_width("GPiano", title_sz)
     
-    # Removed piano emoji to avoid question mark rendering
-    draw_text_modern("GPiano", 25, int(10 + top_height/2 - title_sz), title_sz, pr.WHITE)
-    draw_text_modern("Aprende tocando tus canciones favoritas", 25, int(10 + top_height/2 + 2), desc_sz, pr.Color(163, 163, 163, 255))
-
-    # Song Select Dropdown Menu
-    select_label = "Canción: "
-    select_lbl_sz = int(12 * ui_scale)
-    select_lbl_w = measure_text_modern_width(select_label, select_lbl_sz)
+    # Volver al Menú Button Geometry
+    back_box_w = int(140 * ui_scale)
+    back_box_h = int(32 * ui_scale)
+    back_x = sw - back_box_w - 25
+    back_y = int(top_height/2 - back_box_h/2)
+    back_button_rect = pr.Rectangle(back_x, back_y, back_box_w, back_box_h)
     
-    # Scale select box
-    select_box_w = int(160 * ui_scale)
-    select_box_h = int(32 * ui_scale)
-    
-    # Position select box
-    select_x = sw - select_box_w - select_lbl_w - 40
-    select_y = int(10 + top_height/2 - select_box_h/2)
-    
-    draw_text_modern(select_label, select_x, select_y + int(select_box_h/2 - select_lbl_sz/2), select_lbl_sz, pr.Color(163, 163, 163, 255))
-    
-    song_select_rect = pr.Rectangle(select_x + select_lbl_w + 5, select_y, select_box_w, select_box_h)
-    
-    pr.draw_rectangle_rounded(song_select_rect, 0.3, 4, pr.Color(10, 10, 10, 255))
-    pr.draw_rectangle_rounded_lines(song_select_rect, 0.3, 4, pr.Color(38, 38, 38, 255))
-    
-    # Display selected song name
-    sel_song_title = "Libre (Ninguna)"
-    if selected_song_id == "twinkle":
-        sel_song_title = "Estrellita"
-    elif selected_song_id == "joy":
-        sel_song_title = "Himno a la Alegría"
-    elif selected_song_id == "birthday":
-        sel_song_title = "Cumpleaños"
-        
-    title_sz = int(11 * ui_scale)
-    draw_text_modern(sel_song_title, int(song_select_rect.x + 10 * ui_scale), int(song_select_rect.y + select_box_h/2 - title_sz/2), title_sz, pr.WHITE)
-    draw_text_modern("v", int(song_select_rect.x + select_box_w - 20 * ui_scale), int(song_select_rect.y + select_box_h/2 - title_sz/2), title_sz, pr.Color(163, 163, 163, 255))
-    
-    # Stats Capsule (in practice mode)
-    if selected_song_id != "none":
+    # Check if stats capsule is needed
+    has_stats = (selected_song_id != "none")
+    if has_stats:
         stats_w = int(310 * ui_scale)
         stats_h = int(36 * ui_scale)
-        stats_x = select_x - stats_w - 20
-        stats_y = int(10 + top_height/2 - stats_h/2)
+        stats_x = back_x - stats_w - 20
+        stats_y = int(top_height/2 - stats_h/2)
+        right_block_start_x = stats_x
+    else:
+        right_block_start_x = back_x
+
+    # Responsive Visibility Rules
+    show_subtitle = True
+    show_title = True
+    
+    # Hide subtitle if space is tight
+    if sw < 1150 or (has_stats and sw < 1250):
+        show_subtitle = False
+    
+    # Hide title as well if space is extremely narrow
+    if sw < 850 or (has_stats and sw < 950):
+        show_title = False
+
+    # Draw Left block (Title/Subtitle)
+    if show_title:
+        draw_text_modern("GPiano", 25, int(top_height/2 - title_sz), title_sz, pr.Color(20, 20, 20, 255))
+        if show_subtitle:
+            draw_text_modern("Aprende tocando tus canciones favoritas", 25, int(top_height/2 + 2), desc_sz, pr.Color(100, 100, 100, 255))
+        else:
+            # Center title vertically if there is no subtitle
+            draw_text_modern("GPiano", 25, int(top_height/2 - title_sz/2), title_sz, pr.Color(20, 20, 20, 255))
+
+    # Draw Logo centered both horizontally and vertically in the header (Absolute Center)
+    if logo_texture:
+        logo_aspect = logo_texture.width / logo_texture.height
+        target_h = int(top_height * 0.75)
+        target_w = int(target_h * logo_aspect)
         
-        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(10, 10, 10, 255))
-        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(38, 38, 38, 255))
+        # Absolute center horizontally and vertically
+        logo_x = sw // 2 - target_w // 2
+        logo_y = top_height // 2 - target_h // 2
+        
+        source_rect = pr.Rectangle(0, 0, logo_texture.width, logo_texture.height)
+        dest_rect = pr.Rectangle(logo_x, logo_y, target_w, target_h)
+        origin = pr.Vector2(0, 0)
+        pr.draw_texture_pro(logo_texture, source_rect, dest_rect, origin, 0.0, pr.WHITE)
+
+    # Draw Volver al Menú Button
+    m_pos = pr.get_mouse_position()
+    back_hovered = pr.check_collision_point_rec(m_pos, back_button_rect)
+    
+    if back_hovered:
+        pr.draw_rectangle_rounded(back_button_rect, 0.3, 4, pr.Color(230, 230, 230, 255))
+    else:
+        pr.draw_rectangle_rounded(back_button_rect, 0.3, 4, pr.Color(245, 245, 245, 255))
+        
+    pr.draw_rectangle_rounded_lines(back_button_rect, 0.3, 4, pr.Color(200, 200, 200, 255))
+    
+    back_txt = "Volver al Menú"
+    back_txt_sz = int(12 * ui_scale)
+    back_txt_w = measure_text_modern_width(back_txt, back_txt_sz)
+    draw_text_modern(back_txt, int(back_button_rect.x + back_button_rect.width / 2 - back_txt_w / 2), int(back_button_rect.y + back_button_rect.height / 2 - back_txt_sz / 2), back_txt_sz, pr.Color(30, 30, 30, 255))
+    
+    # Check click on Volver button
+    if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT) and back_hovered:
+        app_state = STATE_MENU
+        handle_song_change("none")
+        
+    # Draw Stats Capsule
+    if has_stats:
+        pr.draw_rectangle_rounded(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(245, 245, 245, 255))
+        pr.draw_rectangle_rounded_lines(pr.Rectangle(stats_x, stats_y, stats_w, stats_h), 0.35, 4, pr.Color(200, 200, 200, 255))
         
         stats_text = f"Puntos: {score}  |  Combo: {combo} (Máx: {max_combo})  |  Fallos: {mistake_count}"
         font_sz = int(10 * ui_scale)
         text_w = measure_text_modern_width(stats_text, font_sz)
-        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.WHITE)
-
-    # Check click on select box
-    m_pos = pr.get_mouse_position()
-    if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
-        if pr.check_collision_point_rec(m_pos, song_select_rect):
-            song_select_open = not song_select_open
-        elif song_select_open:
-            # Check options selection
-            options = ["none", "twinkle", "joy", "birthday"]
-            opt_h = int(40 * ui_scale)
-            for i, opt in enumerate(options):
-                opt_rect = pr.Rectangle(song_select_rect.x, song_select_rect.y + song_select_rect.height + i * opt_h, song_select_rect.width, opt_h)
-                if pr.check_collision_point_rec(m_pos, opt_rect):
-                    handle_song_change(opt)
-                    song_select_open = False
-                    break
-            else:
-                song_select_open = False
-
-    # Draw expanded options dropdown
-    if song_select_open:
-        options = [
-            {"id": "none", "title": "Libre"},
-            {"id": "twinkle", "title": "Estrellita"},
-            {"id": "joy", "title": "Himno Alegría"},
-            {"id": "birthday", "title": "Cumpleaños"}
-        ]
+        draw_text_modern(stats_text, stats_x + stats_w // 2 - text_w // 2, stats_y + stats_h // 2 - font_sz // 2, font_sz, pr.Color(30, 30, 30, 255))
         
-        opt_h = int(40 * ui_scale)
-        dropdown_h = len(options) * opt_h
-        dropdown_x = select_x + select_lbl_w + 5
-        dropdown_y = select_y + select_box_h
+    # Draw Timer Countdown in Free Play Mode
+    if app_state == STATE_FREE_PLAY:
+        timer_text = f"Tiempo libre: {int(free_play_timer // 60)}:{int(free_play_timer % 60):02d}"
+        timer_sz = int(13 * ui_scale)
+        timer_w = measure_text_modern_width(timer_text, timer_sz)
+        timer_x = back_x - timer_w - 30
+        timer_y = int(top_height / 2 - timer_sz / 2)
         
-        pr.draw_rectangle(int(dropdown_x), int(dropdown_y), select_box_w, dropdown_h, pr.Color(15, 15, 15, 250))
-        pr.draw_rectangle_lines(int(dropdown_x), int(dropdown_y), select_box_w, dropdown_h, pr.Color(38, 38, 38, 255))
-        
-        for i, opt in enumerate(options):
-            opt_rect = pr.Rectangle(dropdown_x, dropdown_y + i * opt_h, select_box_w, opt_h)
-            is_hovered = pr.check_collision_point_rec(m_pos, opt_rect)
-            
-            # Hover backglow
-            if is_hovered:
-                pr.draw_rectangle_rec(opt_rect, pr.Color(26, 26, 26, 255))
-                
-            draw_text_modern(opt["title"], int(opt_rect.x + 10 * ui_scale), int(opt_rect.y + opt_h/2 - title_sz/2), title_sz, pr.WHITE)
-            pr.draw_line(int(opt_rect.x), int(opt_rect.y + opt_rect.height), int(opt_rect.x + opt_rect.width), int(opt_rect.y + opt_rect.height), pr.Color(23, 23, 23, 100))
+        # Red warning pill when time is low (< 30 seconds)
+        if free_play_timer <= 30.0:
+            pill_w = timer_w + int(24 * ui_scale)
+            pill_h = timer_sz + int(12 * ui_scale)
+            pill_x = timer_x - int(12 * ui_scale)
+            pill_y = int(top_height / 2 - pill_h / 2)
+            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
+            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
+            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+        else:
+            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
@@ -1187,6 +1494,9 @@ for s in loaded_sounds.values():
 
 if custom_font:
     pr.unload_font(custom_font)
+
+if logo_texture:
+    pr.unload_texture(logo_texture)
     
 pr.close_audio_device()
 pr.close_window()
