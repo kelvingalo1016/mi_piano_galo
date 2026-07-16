@@ -78,6 +78,36 @@ if os.path.exists(flecha_der_path):
     except Exception as e:
         print("Failed to load flecha_derecha texture:", e)
 
+# Load Countdown Number Textures
+num1_path = os.path.join(SCRIPT_DIR, "iconos", "1.png")
+num2_path = os.path.join(SCRIPT_DIR, "iconos", "2.png")
+num3_path = os.path.join(SCRIPT_DIR, "iconos", "3.png")
+
+num1_texture = None
+num2_texture = None
+num3_texture = None
+
+if os.path.exists(num1_path):
+    try:
+        num1_texture = pr.load_texture(num1_path)
+        print("Loaded texture 1 successfully.")
+    except Exception as e:
+        print("Failed to load texture 1:", e)
+
+if os.path.exists(num2_path):
+    try:
+        num2_texture = pr.load_texture(num2_path)
+        print("Loaded texture 2 successfully.")
+    except Exception as e:
+        print("Failed to load texture 2:", e)
+
+if os.path.exists(num3_path):
+    try:
+        num3_texture = pr.load_texture(num3_path)
+        print("Loaded texture 3 successfully.")
+    except Exception as e:
+        print("Failed to load texture 3:", e)
+
 # Modern Text Wrappers for Premium Typography
 def draw_text_modern(text, x, y, size, color):
     if custom_font:
@@ -355,6 +385,8 @@ free_play_timer = 180.0  # 3 minutes countdown
 carousel_index = 0
 current_scroll = 0.0
 target_scroll = 0.0
+in_countdown = False
+countdown_timer = 3.0
 
 CAROUSEL_OPTIONS = [
     {"id": "free", "title": "Modo libre"},
@@ -744,8 +776,14 @@ while not pr.window_should_close():
     if oops_label_timer > 0:
         oops_label_timer -= delta_time
 
+    # Countdown timer update
+    if in_countdown:
+        countdown_timer -= delta_time
+        if countdown_timer <= 0.0:
+            in_countdown = False
+
     # 2. Practice/Solo Game Mode Loop
-    if is_playing and selected_song_id != "none":
+    if is_playing and selected_song_id != "none" and not in_countdown:
         current_song = next((s for s in SONGS if s["id"] == selected_song_id), None)
         if current_song:
             next_note = next((n for n in current_song["notes"] if f"{n['time']}-{n['note']}" not in user_pressed_notes), None)
@@ -768,7 +806,7 @@ while not pr.window_should_close():
                     next_time = next_note["time"]
                     
             playback_time = next_time
-    elif app_state == STATE_FREE_PLAY:
+    elif app_state == STATE_FREE_PLAY and not in_countdown:
         free_play_timer -= delta_time
         if free_play_timer <= 0.0:
             app_state = STATE_MENU
@@ -817,9 +855,13 @@ while not pr.window_should_close():
                 app_state = STATE_FREE_PLAY
                 free_play_timer = 180.0
                 handle_song_change("none")
+                in_countdown = True
+                countdown_timer = 3.0
             else:
                 app_state = STATE_TUTORIAL
                 handle_song_change(option["id"])
+                in_countdown = True
+                countdown_timer = 3.0
                 
         # Check mouse/touch clicks on carousel elements
         if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
@@ -858,9 +900,13 @@ while not pr.window_should_close():
                         app_state = STATE_FREE_PLAY
                         free_play_timer = 180.0
                         handle_song_change("none")
+                        in_countdown = True
+                        countdown_timer = 3.0
                     else:
                         app_state = STATE_TUTORIAL
                         handle_song_change(option["id"])
+                        in_countdown = True
+                        countdown_timer = 3.0
 
     # Layout Coordinates
     top_height = int(80 * ui_scale)
@@ -882,7 +928,7 @@ while not pr.window_should_close():
         
     # Check notes pressed by mouse/touch
     pressed_by_touch = set()
-    if not (show_celebration and show_modal) and app_state != STATE_MENU:
+    if not (show_celebration and show_modal) and app_state != STATE_MENU and not in_countdown:
         for pt in active_points:
             # Check black keys first (overlay z-order)
             hit_black = False
@@ -912,7 +958,7 @@ while not pr.window_should_close():
     prev_pressed_notes = pressed_by_touch.copy()
 
     # Read QWERTY keyboard mappings
-    if not (show_celebration and show_modal) and app_state != STATE_MENU:
+    if not (show_celebration and show_modal) and app_state != STATE_MENU and not in_countdown:
         for key_data in PIANO_KEYS:
             char = key_data["key"]
             r_key = KEY_MAP_RAYLIB.get(char)
@@ -929,11 +975,51 @@ while not pr.window_should_close():
         # Clear background to a very clean light gray
         pr.clear_background(pr.Color(245, 245, 245, 255))
         
+        # --- Draw Top Panel Header (Premium sharp card with 90° corners, full-width) ---
+        top_height = int(80 * ui_scale)
+        pr.draw_rectangle(0, 0, sw, top_height, pr.WHITE)
+        pr.draw_line(0, top_height, sw, top_height, pr.Color(200, 200, 200, 255))
+        
+        # Left Logo & Info Scale calculations
+        title_sz = int(24 * ui_scale)
+        desc_sz = int(11 * ui_scale)
+        
+        # Responsive Visibility Rules
+        show_subtitle = True
+        show_title = True
+        
+        if sw < 1100:
+            show_subtitle = False
+        if sw < 800:
+            show_title = False
+            
+        # Draw Left block (Title/Subtitle)
+        if show_title:
+            draw_text_modern("GPiano", 25, int(top_height/2 - title_sz), title_sz, pr.Color(20, 20, 20, 255))
+            if show_subtitle:
+                draw_text_modern("Aprende tocando tus canciones favoritas", 25, int(top_height/2 + 2), desc_sz, pr.Color(100, 100, 100, 255))
+            else:
+                draw_text_modern("GPiano", 25, int(top_height/2 - title_sz/2), title_sz, pr.Color(20, 20, 20, 255))
+        
+        # Draw Logo centered both horizontally and vertically in the header (Absolute Center)
+        if logo_texture:
+            logo_aspect = logo_texture.width / logo_texture.height
+            target_h = int(top_height * 0.75)
+            target_w = int(target_h * logo_aspect)
+            
+            logo_x = sw // 2 - target_w // 2
+            logo_y = top_height // 2 - target_h // 2
+            
+            source_rect = pr.Rectangle(0, 0, logo_texture.width, logo_texture.height)
+            dest_rect = pr.Rectangle(logo_x, logo_y, target_w, target_h)
+            origin = pr.Vector2(0, 0)
+            pr.draw_texture_pro(logo_texture, source_rect, dest_rect, origin, 0.0, pr.WHITE)
+            
         # 1. Draw Title "Elige una opción:"
         title_text = "Elige una opción:"
         title_font_sz = int(32 * ui_scale)
         title_w = measure_text_modern_width(title_text, title_font_sz)
-        draw_text_modern(title_text, sw // 2 - title_w // 2, int(sh * 0.15), title_font_sz, pr.BLACK)
+        draw_text_modern(title_text, sw // 2 - title_w // 2, top_height + int(25 * ui_scale), title_font_sz, pr.BLACK)
         
         # 2. Dynamic card drawing loop
         card_cy = sh // 2 + int(20 * ui_scale)
@@ -1348,8 +1434,8 @@ while not pr.window_should_close():
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
-        # Translucent dark backdrop
-        pr.draw_rectangle(0, 0, sw, sh, pr.Color(0, 0, 0, 215)) # 85% opacity
+        # Translucent white backdrop
+        pr.draw_rectangle(0, 0, sw, sh, pr.Color(255, 255, 255, 215)) # 85% opacity
         
         # Modal card dimensions
         modal_w = int(360 * ui_scale)
@@ -1359,14 +1445,14 @@ while not pr.window_should_close():
         
         modal_rect = pr.Rectangle(modal_x, modal_y, modal_w, modal_h)
         
-        # Premium white outer halo glow
+        # Premium black outer shadow
         for glow in range(1, 15):
             glow_rect = pr.Rectangle(modal_x - glow, modal_y - glow, modal_w + glow * 2, modal_h + glow * 2)
-            pr.draw_rectangle_rounded_lines(glow_rect, 0.1, 4, pr.Color(255, 255, 255, int((15 - glow) * 1.8)))
+            pr.draw_rectangle_rounded_lines(glow_rect, 0.1, 4, pr.Color(0, 0, 0, int((15 - glow) * 6.0)))
             
-        # Draw modal card body (Glassmorphic dark design)
-        pr.draw_rectangle_rounded(modal_rect, 0.1, 4, pr.Color(12, 12, 12, 255))
-        pr.draw_rectangle_rounded_lines(modal_rect, 0.1, 4, pr.Color(38, 38, 38, 255))
+        # Draw modal card body (Clean white design)
+        pr.draw_rectangle_rounded(modal_rect, 0.1, 4, pr.WHITE)
+        pr.draw_rectangle_rounded_lines(modal_rect, 0.1, 4, pr.Color(200, 200, 200, 255))
         
         # Draw Vector Trophy (Animated bouncing)
         bounce_offset = int(math.sin(pr.get_time() * 4) * 6 * ui_scale)
@@ -1377,12 +1463,12 @@ while not pr.window_should_close():
         title_txt = "¡Canción Completada!"
         title_sz = int(22 * ui_scale)
         title_w = measure_text_modern_width(title_txt, title_sz)
-        draw_text_modern(title_txt, sw // 2 - title_w // 2, modal_y + int(135 * ui_scale), title_sz, pr.WHITE)
+        draw_text_modern(title_txt, sw // 2 - title_w // 2, modal_y + int(135 * ui_scale), title_sz, pr.BLACK)
         
         sub_txt = "Has finalizado la lección con éxito"
         sub_sz = int(12 * ui_scale)
         sub_w = measure_text_modern_width(sub_txt, sub_sz)
-        draw_text_modern(sub_txt, sw // 2 - sub_w // 2, modal_y + int(165 * ui_scale), sub_sz, pr.Color(163, 163, 163, 255))
+        draw_text_modern(sub_txt, sw // 2 - sub_w // 2, modal_y + int(165 * ui_scale), sub_sz, pr.Color(100, 100, 100, 255))
         
         # Draw Rating Stars
         current_song = next((s for s in SONGS if s["id"] == selected_song_id), None)
@@ -1411,25 +1497,25 @@ while not pr.window_should_close():
         breakdown_h = int(110 * ui_scale)
         breakdown_rect = pr.Rectangle(modal_x + int(20 * ui_scale), breakdown_y, breakdown_w, breakdown_h)
         
-        pr.draw_rectangle_rounded(breakdown_rect, 0.15, 4, pr.Color(20, 20, 20, 255))
-        pr.draw_rectangle_rounded_lines(breakdown_rect, 0.15, 4, pr.Color(38, 38, 38, 255))
+        pr.draw_rectangle_rounded(breakdown_rect, 0.15, 4, pr.Color(245, 245, 245, 255))
+        pr.draw_rectangle_rounded_lines(breakdown_rect, 0.15, 4, pr.Color(220, 220, 220, 255))
         
-        # Details stats texts
-        text_sz = int(12 * ui_scale)
-        text_y = breakdown_y + int(15 * ui_scale)
-        line_spacing = int(28 * ui_scale)
+        # Details stats texts (Enlarged size, high contrast)
+        text_sz = int(16 * ui_scale)
+        text_y = breakdown_y + int(12 * ui_scale)
+        line_spacing = int(32 * ui_scale)
         
-        draw_text_modern("Puntuación Final:", int(breakdown_rect.x + 15 * ui_scale), text_y, text_sz, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Puntuación Final:", int(breakdown_rect.x + 15 * ui_scale), text_y, text_sz, pr.Color(80, 80, 80, 255))
         scr_lbl = str(score)
-        draw_text_modern(scr_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(scr_lbl, text_sz) - 15 * ui_scale), text_y, text_sz, pr.WHITE)
+        draw_text_modern(scr_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(scr_lbl, text_sz) - 15 * ui_scale), text_y, text_sz, pr.BLACK)
         
-        draw_text_modern("Combo Máximo:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Combo Máximo:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(80, 80, 80, 255))
         cmb_lbl = str(max_combo)
-        draw_text_modern(cmb_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(cmb_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(14, 165, 233, 255))
+        draw_text_modern(cmb_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(cmb_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing, text_sz, pr.Color(2, 132, 199, 255))
         
-        draw_text_modern("Total de Fallos:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(163, 163, 163, 255))
+        draw_text_modern("Total de Fallos:", int(breakdown_rect.x + 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(80, 80, 80, 255))
         mst_lbl = str(mistake_count)
-        draw_text_modern(mst_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(mst_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(239, 68, 68, 255))
+        draw_text_modern(mst_lbl, int(breakdown_rect.x + breakdown_w - measure_text_modern_width(mst_lbl, text_sz) - 15 * ui_scale), text_y + line_spacing * 2, text_sz, pr.Color(220, 38, 38, 255))
         
         # Aceptar Button
         btn_y = modal_y + int(365 * ui_scale)
@@ -1438,17 +1524,68 @@ while not pr.window_should_close():
         btn_rect = pr.Rectangle(modal_x + int(20 * ui_scale), btn_y, btn_w, btn_h)
         
         btn_hovered = pr.check_collision_point_rec(m_pos, btn_rect)
-        btn_col = pr.Color(240, 240, 240, 255) if btn_hovered else pr.WHITE
+        btn_col = pr.Color(40, 40, 40, 255) if btn_hovered else pr.BLACK
         
         pr.draw_rectangle_rounded(btn_rect, 0.25, 4, btn_col)
         
         btn_txt = "Aceptar"
         btn_txt_sz = int(14 * ui_scale)
         btn_txt_w = measure_text_modern_width(btn_txt, btn_txt_sz)
-        draw_text_modern(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - btn_txt_sz // 2), btn_txt_sz, pr.BLACK)
+        draw_text_modern(btn_txt, int(btn_rect.x + btn_w // 2 - btn_txt_w // 2), int(btn_rect.y + btn_h // 2 - btn_txt_sz // 2), btn_txt_sz, pr.WHITE)
         
         if btn_hovered and pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
             close_celebration_modal()
+
+    # --- Draw Countdown Overlay ---
+    if in_countdown:
+        # Translucent white backdrop (85% opacity)
+        pr.draw_rectangle(0, 0, sw, sh, pr.Color(255, 255, 255, 215))
+        
+        # Calculate seconds left
+        seconds_left = int(math.ceil(countdown_timer))
+        if seconds_left < 1:
+            seconds_left = 1
+        elif seconds_left > 3:
+            seconds_left = 3
+            
+        # Select active texture based on seconds left
+        active_tex = None
+        if seconds_left == 3:
+            active_tex = num3_texture
+        elif seconds_left == 2:
+            active_tex = num2_texture
+        else:
+            active_tex = num1_texture
+            
+        # Pulse animation using the fractional part of countdown_timer
+        fractional_part = countdown_timer - math.floor(countdown_timer)
+        pulse_factor = 1.0 + fractional_part * 0.4
+        
+        target_h = int(180 * pulse_factor * ui_scale) # base height of 180px
+        
+        if active_tex and active_tex.id > 0:
+            # Draw texture centered
+            aspect = active_tex.width / active_tex.height
+            dest_w = target_h * aspect
+            dest_h = target_h
+            
+            source_rec = pr.Rectangle(0, 0, active_tex.width, active_tex.height)
+            dest_rec = pr.Rectangle(sw // 2, sh // 2, dest_w, dest_h)
+            origin = pr.Vector2(dest_w / 2, dest_h / 2)
+            
+            pr.draw_texture_pro(active_tex, source_rec, dest_rec, origin, 0.0, pr.WHITE)
+        else:
+            # Fallback to text drawing
+            countdown_text = str(seconds_left)
+            text_sz = int(120 * pulse_factor * ui_scale)
+            text_w = measure_text_modern_width(countdown_text, text_sz)
+            draw_text_modern(
+                countdown_text,
+                sw // 2 - text_w // 2,
+                sh // 2 - text_sz // 2,
+                text_sz,
+                pr.Color(20, 20, 20, 255)
+            )
 
     pr.end_drawing()
 
@@ -1461,6 +1598,13 @@ if custom_font:
 
 if logo_texture:
     pr.unload_texture(logo_texture)
+
+if num1_texture:
+    pr.unload_texture(num1_texture)
+if num2_texture:
+    pr.unload_texture(num2_texture)
+if num3_texture:
+    pr.unload_texture(num3_texture)
     
 pr.close_audio_device()
 pr.close_window()
