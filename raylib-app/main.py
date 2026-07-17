@@ -16,6 +16,27 @@ pr.init_audio_device()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 AUDIO_DIR = os.path.join(SCRIPT_DIR, "..", "public", "audio", "piano")
 FONT_PATH = os.path.join(SCRIPT_DIR, "Inter-Bold", "Inter (TTF)", "Inter-Bold.ttf")
+CLICK_SOUND_PATH = os.path.join(SCRIPT_DIR, "sonidos", "click_select_option_sound.wav")
+SELECT_SOUND_PATH = os.path.join(SCRIPT_DIR, "sonidos", "seleccion_opcion_sonido.wav")
+
+# Load Menu Audio Effects
+click_sound = None
+select_sound = None
+
+if os.path.exists(CLICK_SOUND_PATH):
+    try:
+        click_sound = pr.load_sound(CLICK_SOUND_PATH)
+        print("Loaded click navigation sound successfully.")
+    except Exception as e:
+        print("Failed to load click navigation sound:", e)
+
+if os.path.exists(SELECT_SOUND_PATH):
+    try:
+        select_sound = pr.load_sound(SELECT_SOUND_PATH)
+        print("Loaded selection sound successfully.")
+    except Exception as e:
+        print("Failed to load selection sound:", e)
+
 
 # Modern Font Downloader and Loader
 custom_font = None
@@ -387,6 +408,10 @@ current_scroll = 0.0
 target_scroll = 0.0
 in_countdown = False
 countdown_timer = 3.0
+selection_timer = 0.0
+fade_outs = {}
+
+
 
 CAROUSEL_OPTIONS = [
     {"id": "free", "title": "Modo libre"},
@@ -469,11 +494,14 @@ def get_key_x(note_name, canvas_width):
         return x_divider, True, b_width
 
 # Handle user key hits
-def handle_play_note(note):
+def handle_play_note(note, volume=1.0):
     active_notes.add(note)
     
     # Sound trigger
     if note in loaded_sounds:
+        if note in fade_outs:
+            del fade_outs[note]
+        pr.set_sound_volume(loaded_sounds[note], volume)
         pr.play_sound(loaded_sounds[note])
         
     global score, combo, max_combo, mistake_count
@@ -502,6 +530,8 @@ def handle_play_note(note):
 
 def handle_stop_note(note):
     active_notes.discard(note)
+    if note in loaded_sounds:
+        fade_outs[note] = 1.0
 
 def trigger_mistake(note):
     mistakes_notes_map[note] = 0.3 # shake duration
@@ -572,6 +602,11 @@ def stop_song_playback():
     is_playing = False
     guide_notes.clear()
     active_notes.clear()
+    # Stop all sounds and reset their volumes to 1.0
+    for note in loaded_sounds:
+        pr.stop_sound(loaded_sounds[note])
+        pr.set_sound_volume(loaded_sounds[note], 1.0)
+    fade_outs.clear()
 
 def reset_stats():
     global score, combo, max_combo, mistake_count
@@ -741,6 +776,9 @@ while not pr.window_should_close():
         trigger_time, note, duration = item
         if now_time >= trigger_time:
             if note in loaded_sounds:
+                if note in fade_outs:
+                    del fade_outs[note]
+                pr.set_sound_volume(loaded_sounds[note], 1.0)
                 pr.play_sound(loaded_sounds[note])
             scheduled_releases.append((now_time + duration, note))
             scheduled_fanfare.remove(item)
@@ -749,6 +787,8 @@ while not pr.window_should_close():
     for item in list(scheduled_releases):
         release_time, note = item
         if now_time >= release_time:
+            if note in loaded_sounds:
+                fade_outs[note] = 1.0
             scheduled_releases.remove(item)
             
     # Rainbow keys cascade animation
@@ -781,6 +821,18 @@ while not pr.window_should_close():
         countdown_timer -= delta_time
         if countdown_timer <= 0.0:
             in_countdown = False
+
+    # Update active sound fade outs
+    for note in list(fade_outs.keys()):
+        vol = fade_outs[note] - delta_time * 6.0  # fade out over ~166ms
+        if vol <= 0.0:
+            if note in loaded_sounds:
+                pr.stop_sound(loaded_sounds[note])
+            del fade_outs[note]
+        else:
+            fade_outs[note] = vol
+            if note in loaded_sounds:
+                pr.set_sound_volume(loaded_sounds[note], vol)
 
     # 2. Practice/Solo Game Mode Loop
     if is_playing and selected_song_id != "none" and not in_countdown:
@@ -819,9 +871,11 @@ while not pr.window_should_close():
             show_modal = True
 
     # Exit celebration if modal is open and key is pressed
+    just_closed_modal = False
     if show_celebration and show_modal:
         if pr.get_key_pressed() != 0:
             close_celebration_modal()
+            just_closed_modal = True
 
     # 3. Process pointer and QWERTY keyboard inputs
     sw = pr.get_screen_width()
@@ -832,7 +886,26 @@ while not pr.window_should_close():
     ui_scale = min(sw / 1024.0, sh / 600.0)
     
     # Menu Navigation logic
-    if app_state == STATE_MENU:
+    if app_state == STATE_MENU and not just_closed_modal:
+        # Update selection/blink timer
+        if selection_timer > 0.0:
+            selection_timer -= delta_time
+            if selection_timer <= 0.0:
+                selection_timer = 0.0
+                # Perform the transition now that the blink is done
+                option = CAROUSEL_OPTIONS[carousel_index]
+                if option["id"] == "free":
+                    app_state = STATE_FREE_PLAY
+                    free_play_timer = 180.0
+                    handle_song_change("none")
+                    in_countdown = True
+                    countdown_timer = 3.0
+                else:
+                    app_state = STATE_TUTORIAL
+                    handle_song_change(option["id"])
+                    in_countdown = True
+                    countdown_timer = 3.0
+
         # Smooth scroll interpolation
         if current_scroll != target_scroll:
             current_scroll += (target_scroll - current_scroll) * 12.0 * delta_time
@@ -840,31 +913,26 @@ while not pr.window_should_close():
                 current_scroll = target_scroll
                 
         # Check QWERTY keyboard first (piano keys mapping)
-        if current_scroll == target_scroll:
+        if current_scroll == target_scroll and selection_timer == 0.0:
             if pr.is_key_pressed(pr.KEY_A):  # Left
                 target_scroll = current_scroll - 1.0
                 carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                if click_sound:
+                    pr.play_sound(click_sound)
             elif pr.is_key_pressed(pr.KEY_E):  # Right
                 target_scroll = current_scroll + 1.0
                 carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                if click_sound:
+                    pr.play_sound(click_sound)
                 
         # Enter action is only processed if scroll has completed
-        if pr.is_key_pressed(pr.KEY_C) and current_scroll == target_scroll:  # Enter
-            option = CAROUSEL_OPTIONS[carousel_index]
-            if option["id"] == "free":
-                app_state = STATE_FREE_PLAY
-                free_play_timer = 180.0
-                handle_song_change("none")
-                in_countdown = True
-                countdown_timer = 3.0
-            else:
-                app_state = STATE_TUTORIAL
-                handle_song_change(option["id"])
-                in_countdown = True
-                countdown_timer = 3.0
+        if pr.is_key_pressed(pr.KEY_C) and current_scroll == target_scroll and selection_timer == 0.0:  # Enter
+            if select_sound:
+                pr.play_sound(select_sound)
+            selection_timer = 0.6  # 600ms blink duration
                 
         # Check mouse/touch clicks on carousel elements
-        if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT):
+        if pr.is_mouse_button_pressed(pr.MOUSE_BUTTON_LEFT) and selection_timer == 0.0:
             m_pos = pr.get_mouse_position()
             
             center_card_w = int(260 * ui_scale)
@@ -891,22 +959,18 @@ while not pr.window_should_close():
                 if pr.check_collision_point_rec(m_pos, left_arrow_rect) or pr.check_collision_point_rec(m_pos, left_card_rect):
                     target_scroll = current_scroll - 1.0
                     carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                    if click_sound:
+                        pr.play_sound(click_sound)
                 elif pr.check_collision_point_rec(m_pos, right_arrow_rect) or pr.check_collision_point_rec(m_pos, right_card_rect):
                     target_scroll = current_scroll + 1.0
                     carousel_index = int(round(target_scroll)) % len(CAROUSEL_OPTIONS)
+                    if click_sound:
+                        pr.play_sound(click_sound)
                 elif pr.check_collision_point_rec(m_pos, center_card_rect):
-                    option = CAROUSEL_OPTIONS[carousel_index]
-                    if option["id"] == "free":
-                        app_state = STATE_FREE_PLAY
-                        free_play_timer = 180.0
-                        handle_song_change("none")
-                        in_countdown = True
-                        countdown_timer = 3.0
-                    else:
-                        app_state = STATE_TUTORIAL
-                        handle_song_change(option["id"])
-                        in_countdown = True
-                        countdown_timer = 3.0
+                    if select_sound:
+                        pr.play_sound(select_sound)
+                    selection_timer = 0.6  # 600ms blink duration
+
 
     # Layout Coordinates
     top_height = int(80 * ui_scale)
@@ -927,7 +991,7 @@ while not pr.window_should_close():
         active_points.append(pr.get_touch_position(t))
         
     # Check notes pressed by mouse/touch
-    pressed_by_touch = set()
+    pressed_by_touch = {}
     if not (show_celebration and show_modal) and app_state != STATE_MENU and not in_countdown:
         for pt in active_points:
             # Check black keys first (overlay z-order)
@@ -935,7 +999,10 @@ while not pr.window_should_close():
             for bk in black_keys:
                 rect = get_black_key_rect(bk["white_index"], sw, keyboard_y, keyboard_h)
                 if pr.check_collision_point_rec(pt, rect):
-                    pressed_by_touch.add(bk["note"])
+                    # Calculate volume based on Y coordinate (top to bottom of black key)
+                    rel_y = (pt.y - rect.y) / rect.height
+                    volume = 0.35 + 0.65 * max(0.0, min(1.0, rel_y))
+                    pressed_by_touch[bk["note"]] = volume
                     hit_black = True
                     break
             if not hit_black:
@@ -943,19 +1010,22 @@ while not pr.window_should_close():
                 for index, wk in enumerate(white_keys):
                     rect = get_white_key_rect(index, sw, keyboard_y, keyboard_h)
                     if pr.check_collision_point_rec(pt, rect):
-                        pressed_by_touch.add(wk["note"])
+                        # Calculate volume based on Y coordinate (top to bottom of white key)
+                        rel_y = (pt.y - rect.y) / rect.height
+                        volume = 0.35 + 0.65 * max(0.0, min(1.0, rel_y))
+                        pressed_by_touch[wk["note"]] = volume
                         break
                         
     # Compare with previous frame to trigger attacks/releases
-    for note in pressed_by_touch:
+    for note, vol in pressed_by_touch.items():
         if note not in prev_pressed_notes:
-            handle_play_note(note)
+            handle_play_note(note, vol)
             
     for note in prev_pressed_notes:
         if note not in pressed_by_touch:
             handle_stop_note(note)
             
-    prev_pressed_notes = pressed_by_touch.copy()
+    prev_pressed_notes = set(pressed_by_touch.keys())
 
     # Read QWERTY keyboard mappings
     if not (show_celebration and show_modal) and app_state != STATE_MENU and not in_countdown:
@@ -1083,8 +1153,24 @@ while not pr.window_should_close():
             text_b = int(0 + t * 160)
             text_color = pr.Color(text_r, text_g, text_b, alpha)
             
-            # Draw card background (White with alpha)
-            pr.draw_rectangle_rec(card_rect, pr.Color(255, 255, 255, alpha))
+            # Draw card background (White with alpha, or blinking if selected)
+            is_selected_blink = (opt_idx == carousel_index and selection_timer > 0.0)
+            if is_selected_blink:
+                # Blink effect: alternate between white and a premium light-blue highlight (Sky 100/500)
+                if int(selection_timer * 10) % 2 == 0:
+                    bg_color = pr.Color(224, 242, 254, alpha)  # Light Sky Blue
+                    border_color = pr.Color(2, 132, 199, alpha)  # Electric Blue border
+                    border_thick = int(3 * ui_scale)
+                    text_color = pr.Color(3, 105, 161, alpha)  # Deep blue text
+                else:
+                    bg_color = pr.Color(255, 255, 255, alpha)
+                    border_color = pr.Color(14, 165, 233, alpha)
+                    border_thick = int(3 * ui_scale)
+                    text_color = pr.Color(14, 165, 233, alpha)
+            else:
+                bg_color = pr.Color(255, 255, 255, alpha)
+                
+            pr.draw_rectangle_rec(card_rect, bg_color)
             pr.draw_rectangle_lines_ex(card_rect, border_thick, border_color)
             
             # Draw card icon (centered in top half)
@@ -1593,8 +1679,15 @@ while not pr.window_should_close():
 for s in loaded_sounds.values():
     pr.unload_sound(s)
 
+if click_sound:
+    pr.unload_sound(click_sound)
+
+if select_sound:
+    pr.unload_sound(select_sound)
+
 if custom_font:
     pr.unload_font(custom_font)
+
 
 if logo_texture:
     pr.unload_texture(logo_texture)
