@@ -866,6 +866,7 @@ prev_pressed_notes = set()
 # Main Application Loop
 while not pr.window_should_close():
     delta_time = pr.get_frame_time()
+    m_pos = pr.get_mouse_position()
     
     # ------------------ LOADING PHASE ------------------
     if loading_progress < len(PIANO_KEYS):
