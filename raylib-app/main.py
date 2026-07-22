@@ -114,6 +114,7 @@ import pyray as pr
 pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE | pr.FLAG_VSYNC_HINT)
 pr.init_window(1024, 600, "GPiano")
 pr.toggle_fullscreen()
+pr.hide_cursor()
 pr.set_target_fps(60)
 
 # Initialize Audio
