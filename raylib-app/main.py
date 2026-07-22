@@ -255,7 +255,7 @@ def load_samples_tick():
     note = key_data["note"]
     
     closest_sample, semitone_diff = get_closest_sample(note)
-    filename = closest_sample.replace("#", "s") + ".mp3"
+    filename = closest_sample.replace("#", "s") + ".wav"
     filepath = os.path.join(AUDIO_DIR, filename)
     
     if os.path.exists(filepath):
