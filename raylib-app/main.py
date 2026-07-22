@@ -254,14 +254,12 @@ def load_samples_tick():
     key_data = PIANO_KEYS[loading_progress]
     note = key_data["note"]
     
-    closest_sample, semitone_diff = get_closest_sample(note)
-    filename = closest_sample.replace("#", "s") + ".wav"
+    filename = note.replace("#", "s") + ".wav"
     filepath = os.path.join(AUDIO_DIR, filename)
     
     if os.path.exists(filepath):
         sound = pr.load_sound(filepath)
-        pitch = 2.0 ** (semitone_diff / 12.0)
-        pr.set_sound_pitch(sound, pitch)
+        pr.set_sound_pitch(sound, 1.0)
         loaded_sounds[note] = sound
     else:
         print(f"Sample file not found: {filepath}")
