@@ -658,6 +658,13 @@ def handle_stop_note(note):
         midi_note = note_to_midi(note)
         fs_synth.noteoff(0, midi_note)
 
+def clear_all_active_notes():
+    global prev_pressed_notes
+    active_notes.clear()
+    prev_pressed_notes.clear()
+    if fs_synth:
+        fs_synth.cc(0, 123, 0) # All Notes Off
+
 def trigger_mistake(note):
     mistakes_notes_map[note] = 0.3 # shake duration
     
@@ -720,16 +727,14 @@ def close_celebration_modal():
     selected_song_id = "none"
     is_playing = False
     handle_song_change("none")
+    clear_all_active_notes()
     app_state = STATE_MENU
 
 def stop_song_playback():
     global is_playing
     is_playing = False
     guide_notes.clear()
-    active_notes.clear()
-    # Mute all active notes on FluidSynth
-    if fs_synth:
-        fs_synth.cc(0, 123, 0) # All Notes Off
+    clear_all_active_notes()
 
 def reset_stats():
     global score, combo, max_combo, mistake_count
@@ -973,6 +978,7 @@ while not pr.window_should_close():
     elif app_state == STATE_FREE_PLAY and not in_countdown:
         free_play_timer -= delta_time
         if free_play_timer <= 0.0:
+            clear_all_active_notes()
             app_state = STATE_MENU
             handle_song_change("none")
 
@@ -1004,6 +1010,7 @@ while not pr.window_should_close():
             selection_timer -= delta_time
             if selection_timer <= 0.0:
                 selection_timer = 0.0
+                clear_all_active_notes()
                 # Perform the transition now that the blink is done
                 option = CAROUSEL_OPTIONS[carousel_index]
                 if option["id"] == "free":
