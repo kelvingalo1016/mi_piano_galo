@@ -1,7 +1,70 @@
 import os
+import sys
+import subprocess
+import zipfile
 import math
 import urllib.request
+
+def setup_fluidsynth():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    bin_dir = os.path.join(script_dir, "bin")
+    fluid_dir = os.path.join(bin_dir, "fluidsynth")
+    sf2_path = os.path.join(script_dir, "TimGM6mb.sf2")
+    
+    os.makedirs(bin_dir, exist_ok=True)
+    
+    # 1. Download SoundFont if not present
+    if not os.path.exists(sf2_path):
+        print("Downloading TimGM6mb.sf2 SoundFont...")
+        sf2_url = "https://github.com/craffel/pretty-midi/raw/main/pretty_midi/TimGM6mb.sf2"
+        try:
+            urllib.request.urlretrieve(sf2_url, sf2_path)
+            print("SoundFont downloaded successfully.")
+        except Exception as e:
+            print(f"Failed to download SoundFont: {e}")
+            
+    # 2. Download FluidSynth binaries if on Windows and not present
+    if sys.platform == 'win32' and not os.path.exists(fluid_dir):
+        print("Downloading FluidSynth Windows x64 binaries...")
+        fluid_url = "https://github.com/FluidSynth/fluidsynth/releases/download/v2.5.6/fluidsynth-v2.5.6-win10-x64-glib.zip"
+        zip_path = os.path.join(bin_dir, "fluidsynth.zip")
+        try:
+            urllib.request.urlretrieve(fluid_url, zip_path)
+            print("FluidSynth zip downloaded. Extracting...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(fluid_dir)
+            print("Extraction completed.")
+            os.remove(zip_path)
+        except Exception as e:
+            print(f"Failed to download or extract FluidSynth: {e}")
+            
+    # 3. Add DLL directory to search path on Windows
+    if sys.platform == 'win32':
+        dll_path = None
+        for root, dirs, files in os.walk(fluid_dir):
+            if "libfluidsynth-3.dll" in files:
+                dll_path = root
+                break
+        if dll_path:
+            os.environ["PATH"] = dll_path + os.pathsep + os.environ["PATH"]
+            if hasattr(os, "add_dll_directory"):
+                os.add_dll_directory(dll_path)
+                
+    # 4. Ensure pyfluidsynth is installed
+    try:
+        import fluidsynth
+    except ImportError:
+        print("Installing pyfluidsynth...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyfluidsynth"])
+        except Exception as e:
+            print(f"Failed to install pyfluidsynth via pip: {e}")
+
+# Run setup
+setup_fluidsynth()
+import fluidsynth
 import pyray as pr
+
 
 # Initialize Raylib Window
 pr.set_config_flags(pr.FLAG_WINDOW_RESIZABLE | pr.FLAG_VSYNC_HINT)
@@ -242,30 +305,50 @@ KEY_MAP_RAYLIB = {
     "8": pr.KEY_EIGHT, "9": pr.KEY_NINE, "0": pr.KEY_ZERO
 }
 
-# Load sound sampler step-by-step
-loaded_sounds = {}
+# FluidSynth global instance
+fs_synth = None
+sf_id = -1
 loading_progress = 0
 
 def load_samples_tick():
-    global loading_progress
-    if loading_progress >= len(PIANO_KEYS):
+    global loading_progress, fs_synth, sf_id
+    if loading_progress >= 1:
         return True
-    
-    key_data = PIANO_KEYS[loading_progress]
-    note = key_data["note"]
-    
-    filename = note.replace("#", "s") + ".wav"
-    filepath = os.path.join(AUDIO_DIR, filename)
-    
-    if os.path.exists(filepath):
-        sound = pr.load_sound(filepath)
-        pr.set_sound_pitch(sound, 1.0)
-        loaded_sounds[note] = sound
-    else:
-        print(f"Sample file not found: {filepath}")
         
-    loading_progress += 1
-    return loading_progress >= len(PIANO_KEYS)
+    print("Initializing FluidSynth...")
+    try:
+        fs_synth = fluidsynth.Synth()
+        if sys.platform.startswith('linux'):
+            drivers = ['pulseaudio', 'alsa', 'pipewire', 'jack']
+            success = False
+            for driver in drivers:
+                try:
+                    print(f"Trying FluidSynth driver: {driver}...")
+                    fs_synth.start(driver=driver)
+                    success = True
+                    print(f"FluidSynth started successfully with driver: {driver}")
+                    break
+                except Exception as driver_err:
+                    print(f"Failed to start with driver {driver}: {driver_err}")
+            if not success:
+                print("Failed to start FluidSynth with specific drivers, trying default start...")
+                fs_synth.start()
+        else:
+            fs_synth.start()
+        
+        sf2_path = os.path.join(SCRIPT_DIR, "TimGM6mb.sf2")
+        print(f"Loading SoundFont: {sf2_path}")
+        sf_id = fs_synth.sfload(sf2_path)
+        if sf_id != -1:
+            fs_synth.program_select(0, sf_id, 0, 0)
+            print("FluidSynth initialized and SoundFont loaded successfully.")
+        else:
+            print("Failed to load SoundFont.")
+    except Exception as e:
+        print(f"Failed to initialize FluidSynth: {e}")
+        
+    loading_progress = len(PIANO_KEYS)
+    return True
 
 # Song definitions
 SONGS = [
@@ -407,7 +490,7 @@ target_scroll = 0.0
 in_countdown = False
 countdown_timer = 3.0
 selection_timer = 0.0
-fade_outs = {}
+
 
 
 
@@ -495,12 +578,11 @@ def get_key_x(note_name, canvas_width):
 def handle_play_note(note, volume=1.0):
     active_notes.add(note)
     
-    # Sound trigger
-    if note in loaded_sounds:
-        if note in fade_outs:
-            del fade_outs[note]
-        pr.set_sound_volume(loaded_sounds[note], volume)
-        pr.play_sound(loaded_sounds[note])
+    # Sound trigger via FluidSynth
+    if fs_synth and sf_id != -1:
+        midi_note = note_to_midi(note)
+        velocity = int(max(0.0, min(1.0, volume)) * 127)
+        fs_synth.noteon(0, midi_note, velocity)
         
     global score, combo, max_combo, mistake_count
     
@@ -528,8 +610,9 @@ def handle_play_note(note, volume=1.0):
 
 def handle_stop_note(note):
     active_notes.discard(note)
-    if note in loaded_sounds:
-        fade_outs[note] = 1.0
+    if fs_synth and sf_id != -1:
+        midi_note = note_to_midi(note)
+        fs_synth.noteoff(0, midi_note)
 
 def trigger_mistake(note):
     mistakes_notes_map[note] = 0.3 # shake duration
@@ -600,11 +683,9 @@ def stop_song_playback():
     is_playing = False
     guide_notes.clear()
     active_notes.clear()
-    # Stop all sounds and reset their volumes to 1.0
-    for note in loaded_sounds:
-        pr.stop_sound(loaded_sounds[note])
-        pr.set_sound_volume(loaded_sounds[note], 1.0)
-    fade_outs.clear()
+    # Mute all active notes on FluidSynth
+    if fs_synth:
+        fs_synth.cc(0, 123, 0) # All Notes Off
 
 def reset_stats():
     global score, combo, max_combo, mistake_count
@@ -773,11 +854,9 @@ while not pr.window_should_close():
     for item in list(scheduled_fanfare):
         trigger_time, note, duration = item
         if now_time >= trigger_time:
-            if note in loaded_sounds:
-                if note in fade_outs:
-                    del fade_outs[note]
-                pr.set_sound_volume(loaded_sounds[note], 1.0)
-                pr.play_sound(loaded_sounds[note])
+            if fs_synth and sf_id != -1:
+                midi_note = note_to_midi(note)
+                fs_synth.noteon(0, midi_note, 127)
             scheduled_releases.append((now_time + duration, note))
             scheduled_fanfare.remove(item)
             
@@ -785,8 +864,9 @@ while not pr.window_should_close():
     for item in list(scheduled_releases):
         release_time, note = item
         if now_time >= release_time:
-            if note in loaded_sounds:
-                fade_outs[note] = 1.0
+            if fs_synth and sf_id != -1:
+                midi_note = note_to_midi(note)
+                fs_synth.noteoff(0, midi_note)
             scheduled_releases.remove(item)
             
     # Rainbow keys cascade animation
@@ -820,17 +900,7 @@ while not pr.window_should_close():
         if countdown_timer <= 0.0:
             in_countdown = False
 
-    # Update active sound fade outs
-    for note in list(fade_outs.keys()):
-        vol = fade_outs[note] - delta_time * 6.0  # fade out over ~166ms
-        if vol <= 0.0:
-            if note in loaded_sounds:
-                pr.stop_sound(loaded_sounds[note])
-            del fade_outs[note]
-        else:
-            fade_outs[note] = vol
-            if note in loaded_sounds:
-                pr.set_sound_volume(loaded_sounds[note], vol)
+    # Update active sound fade outs is handled natively by FluidSynth ADSR release envelope
 
     # 2. Practice/Solo Game Mode Loop
     if is_playing and selected_song_id != "none" and not in_countdown:
@@ -1674,8 +1744,8 @@ while not pr.window_should_close():
     pr.end_drawing()
 
 # Clean up resources on exit
-for s in loaded_sounds.values():
-    pr.unload_sound(s)
+if fs_synth:
+    fs_synth.delete()
 
 if click_sound:
     pr.unload_sound(click_sound)
