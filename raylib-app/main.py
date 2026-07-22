@@ -76,6 +76,33 @@ def setup_fluidsynth():
                 print("Refreshed Python site paths successfully.")
             except Exception as reload_err:
                 print(f"Failed to refresh site paths: {reload_err}")
+                
+    # 5. Ensure raylib is installed (provides pyray)
+    try:
+        import pyray
+    except ImportError:
+        print("Installing raylib...")
+        installed = False
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "raylib"])
+            installed = True
+        except Exception as e:
+            print(f"Failed to install raylib via pip: {e}")
+            if sys.platform.startswith('linux'):
+                print("Trying to install raylib using --break-system-packages on Linux...")
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "raylib", "--break-system-packages"])
+                    installed = True
+                except Exception as e2:
+                    print(f"Failed to install raylib with --break-system-packages: {e2}")
+        if installed:
+            try:
+                import site
+                from importlib import reload
+                reload(site)
+                print("Refreshed Python site paths successfully for raylib.")
+            except Exception as reload_err:
+                print(f"Failed to refresh site paths: {reload_err}")
 
 # Run setup
 setup_fluidsynth()
