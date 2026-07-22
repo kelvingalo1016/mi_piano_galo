@@ -59,6 +59,12 @@ def setup_fluidsynth():
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pyfluidsynth"])
         except Exception as e:
             print(f"Failed to install pyfluidsynth via pip: {e}")
+            if sys.platform.startswith('linux'):
+                print("Trying to install using --break-system-packages on Linux...")
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "pyfluidsynth", "--break-system-packages"])
+                except Exception as e2:
+                    print(f"Failed to install pyfluidsynth with --break-system-packages: {e2}")
 
 # Run setup
 setup_fluidsynth()
