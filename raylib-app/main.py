@@ -1632,8 +1632,8 @@ while not pr.window_should_close():
         pill_w = timer_w + int(24 * ui_scale)
         pill_h = timer_sz + int(12 * ui_scale)
         
-        # Position the pill with a safe right margin of 30*ui_scale pixels from the screen edge
-        pill_x = sw - pill_w - int(30 * ui_scale)
+        # Position the pill with a margin of 25 pixels from the screen edge (matches GPiano's left margin)
+        pill_x = sw - pill_w - 25
         pill_y = int(top_height / 2 - pill_h / 2)
         
         # Center the text inside the pill
