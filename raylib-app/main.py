@@ -528,7 +528,7 @@ STATE_FREE_PLAY = 1
 STATE_TUTORIAL = 2
 
 app_state = STATE_MENU
-free_play_timer = 180.0  # 3 minutes countdown
+free_play_exit_timer = 0.0  # Tracks how long 'a' and '9' are held down to exit free play
 carousel_index = 0
 current_scroll = 0.0
 target_scroll = 0.0
@@ -978,11 +978,14 @@ while not pr.window_should_close():
                     
             playback_time = next_time
     elif app_state == STATE_FREE_PLAY and not in_countdown:
-        free_play_timer -= delta_time
-        if free_play_timer <= 0.0:
-            clear_all_active_notes()
-            app_state = STATE_MENU
-            handle_song_change("none")
+        if pr.is_key_down(pr.KEY_A) and pr.is_key_down(pr.KEY_NINE):
+            free_play_exit_timer += delta_time
+            if free_play_exit_timer >= 5.0:
+                clear_all_active_notes()
+                app_state = STATE_MENU
+                handle_song_change("none")
+        else:
+            free_play_exit_timer = 0.0
 
     # Update modal timer
     if show_celebration and not show_modal:
@@ -1017,7 +1020,7 @@ while not pr.window_should_close():
                 option = CAROUSEL_OPTIONS[carousel_index]
                 if option["id"] == "free":
                     app_state = STATE_FREE_PLAY
-                    free_play_timer = 180.0
+                    free_play_exit_timer = 0.0
                     handle_song_change("none")
                     in_countdown = True
                     countdown_timer = 3.0
@@ -1619,25 +1622,21 @@ while not pr.window_should_close():
     if has_stats:
         draw_text_modern(stats_text, stats_x, stats_y, stats_sz, pr.Color(30, 30, 30, 255))
         
-    # Draw Timer Countdown in Free Play Mode
-    if app_state == STATE_FREE_PLAY:
-        timer_text = f"Tiempo libre: {int(free_play_timer // 60)}:{int(free_play_timer % 60):02d}"
+    # Draw Exit Countdown in Free Play Mode if keys are held
+    if app_state == STATE_FREE_PLAY and free_play_exit_timer > 0.0:
+        timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
         timer_sz = int(22 * ui_scale)
         timer_w = measure_text_modern_width(timer_text, timer_sz)
         timer_x = sw - timer_w - 25
         timer_y = int(top_height / 2 - timer_sz / 2)
         
-        # Red warning pill when time is low (< 30 seconds)
-        if free_play_timer <= 30.0:
-            pill_w = timer_w + int(24 * ui_scale)
-            pill_h = timer_sz + int(12 * ui_scale)
-            pill_x = timer_x - int(12 * ui_scale)
-            pill_y = int(top_height / 2 - pill_h / 2)
-            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
-            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
-            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
-        else:
-            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+        pill_w = timer_w + int(24 * ui_scale)
+        pill_h = timer_sz + int(12 * ui_scale)
+        pill_x = timer_x - int(12 * ui_scale)
+        pill_y = int(top_height / 2 - pill_h / 2)
+        pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
+        pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
+        draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
