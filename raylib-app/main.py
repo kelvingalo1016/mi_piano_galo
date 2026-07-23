@@ -1627,13 +1627,19 @@ while not pr.window_should_close():
         timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
         timer_sz = int(22 * ui_scale)
         timer_w = measure_text_modern_width(timer_text, timer_sz)
-        timer_x = sw - timer_w - 25
-        timer_y = int(top_height / 2 - timer_sz / 2)
         
+        # Calculate pill dimensions with scaling padding
         pill_w = timer_w + int(24 * ui_scale)
         pill_h = timer_sz + int(12 * ui_scale)
-        pill_x = timer_x - int(12 * ui_scale)
+        
+        # Position the pill with a safe right margin of 30*ui_scale pixels from the screen edge
+        pill_x = sw - pill_w - int(30 * ui_scale)
         pill_y = int(top_height / 2 - pill_h / 2)
+        
+        # Center the text inside the pill
+        timer_x = pill_x + int(12 * ui_scale)
+        timer_y = int(top_height / 2 - timer_sz / 2)
+        
         pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
         pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
         draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
