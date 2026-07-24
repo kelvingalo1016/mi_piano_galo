@@ -1317,10 +1317,10 @@ while not pr.window_should_close():
                 
             # Draw D3 Accept hint on the active center card
             if opt_idx == carousel_index and abs(diff) < 0.1:
-                accept_text = "Presiona D3 para aceptar"
-                accept_sz = int(11 * ui_scale)
+                accept_text = 'Presiona "D3" para aceptar'
+                accept_sz = int(13 * ui_scale)
                 accept_w = measure_text_modern_width(accept_text, accept_sz)
-                accept_y = int(card_y + card_h - 22 * ui_scale)
+                accept_y = int(card_y + card_h - 25 * ui_scale)
                 draw_text_modern(accept_text, note_cx - accept_w // 2, accept_y, accept_sz, text_color)
                 
         # 3. Draw Left and Right Arrows
@@ -1331,11 +1331,11 @@ while not pr.window_should_close():
         draw_menu_arrow(right_arrow_x, card_cy, 1.2 * ui_scale, True, pr.BLACK)
         
         # Draw piano key hints above arrows (symmetrical)
-        arrow_lbl_sz = int(18 * ui_scale)
+        arrow_lbl_sz = int(22 * ui_scale)
         c3_w = measure_text_modern_width("C3", arrow_lbl_sz)
         e3_w = measure_text_modern_width("E3", arrow_lbl_sz)
-        draw_text_modern("C3", left_arrow_x - c3_w // 2, card_cy - int(50 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
-        draw_text_modern("E3", right_arrow_x - e3_w // 2, card_cy - int(50 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
+        draw_text_modern("C3", left_arrow_x - c3_w // 2, card_cy - int(52 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
+        draw_text_modern("E3", right_arrow_x - e3_w // 2, card_cy - int(52 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
         
         pr.end_drawing()
         continue
