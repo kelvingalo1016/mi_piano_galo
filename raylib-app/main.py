@@ -1637,27 +1637,51 @@ while not pr.window_should_close():
     if has_stats:
         draw_text_modern(stats_text, stats_x, stats_y, stats_sz, pr.Color(30, 30, 30, 255))
         
-    # Draw Exit Countdown in Free Play Mode if keys are held
-    if app_state == STATE_FREE_PLAY and free_play_exit_timer > 0.0:
-        timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
-        timer_sz = int(22 * ui_scale)
-        timer_w = measure_text_modern_width(timer_text, timer_sz)
-        
-        # Calculate pill dimensions with scaling padding
-        pill_w = timer_w + int(24 * ui_scale)
-        pill_h = timer_sz + int(12 * ui_scale)
-        
-        # Position the pill with a margin of 25 pixels from the screen edge (matches GPiano's left margin)
-        pill_x = sw - pill_w - 25
-        pill_y = int(top_height / 2 - pill_h / 2)
-        
-        # Center the text inside the pill
-        timer_x = pill_x + int(12 * ui_scale)
-        timer_y = int(top_height / 2 - timer_sz / 2)
-        
-        pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
-        pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
-        draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+    # Draw Exit Countdown in Free Play Mode if keys are held, otherwise draw the instructions hint
+    if app_state == STATE_FREE_PLAY:
+        if free_play_exit_timer > 0.0:
+            timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
+            timer_sz = int(22 * ui_scale)
+            timer_w = measure_text_modern_width(timer_text, timer_sz)
+            
+            # Calculate pill dimensions with scaling padding
+            pill_w = timer_w + int(24 * ui_scale)
+            pill_h = timer_sz + int(12 * ui_scale)
+            
+            # Position the pill with a margin of 25 pixels from the screen edge (matches GPiano's left margin)
+            pill_x = sw - pill_w - 25
+            pill_y = int(top_height / 2 - pill_h / 2)
+            
+            # Center the text inside the pill
+            timer_x = pill_x + int(12 * ui_scale)
+            timer_y = int(top_height / 2 - timer_sz / 2)
+            
+            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
+            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
+            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+        else:
+            hint_text = "Presiona C3 + A#5 para regresar"
+            hint_sz = int(14 * ui_scale)
+            hint_w = measure_text_modern_width(hint_text, hint_sz)
+            
+            # Calculate pill dimensions with scaling padding
+            pill_w = hint_w + int(24 * ui_scale)
+            pill_h = hint_sz + int(12 * ui_scale)
+            
+            # Position the pill with a margin of 25 pixels from the screen edge
+            pill_x = sw - pill_w - 25
+            pill_y = int(top_height / 2 - pill_h / 2)
+            
+            # Center the text inside the pill
+            hint_x = pill_x + int(12 * ui_scale)
+            hint_y = int(top_height / 2 - hint_sz / 2)
+            
+            # Slate premium pill
+            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(241, 245, 249, 255)) # Slate 100
+            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(203, 213, 225, 255)) # Slate 300
+            
+            # Text inside the pill (Slate 600)
+            draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(71, 85, 105, 255))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
