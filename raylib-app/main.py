@@ -362,7 +362,7 @@ def load_samples_tick():
         
     print("Initializing FluidSynth...")
     try:
-        fs_synth = fluidsynth.Synth()
+        fs_synth = fluidsynth.Synth(gain=0.8)
         if sys.platform.startswith('linux'):
             drivers = ['pulseaudio', 'alsa', 'pipewire', 'jack']
             success = False
