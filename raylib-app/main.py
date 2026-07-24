@@ -1661,7 +1661,7 @@ while not pr.window_should_close():
             draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
         else:
             hint_text = "Presiona C3 + A#5 para regresar"
-            hint_sz = int(14 * ui_scale)
+            hint_sz = int(18 * ui_scale)
             hint_w = measure_text_modern_width(hint_text, hint_sz)
             
             # Position the text directly with a margin of 25 pixels from the screen edge
