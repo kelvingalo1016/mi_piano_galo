@@ -1331,11 +1331,11 @@ while not pr.window_should_close():
         draw_menu_arrow(right_arrow_x, card_cy, 1.2 * ui_scale, True, pr.BLACK)
         
         # Draw piano key hints above arrows (symmetrical)
-        arrow_lbl_sz = int(14 * ui_scale)
+        arrow_lbl_sz = int(18 * ui_scale)
         c3_w = measure_text_modern_width("C3", arrow_lbl_sz)
         e3_w = measure_text_modern_width("E3", arrow_lbl_sz)
-        draw_text_modern("C3", left_arrow_x - c3_w // 2, card_cy - int(38 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
-        draw_text_modern("E3", right_arrow_x - e3_w // 2, card_cy - int(38 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
+        draw_text_modern("C3", left_arrow_x - c3_w // 2, card_cy - int(50 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
+        draw_text_modern("E3", right_arrow_x - e3_w // 2, card_cy - int(50 * ui_scale), arrow_lbl_sz, pr.Color(100, 116, 139, 255))
         
         pr.end_drawing()
         continue
