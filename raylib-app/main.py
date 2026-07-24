@@ -1456,7 +1456,7 @@ while not pr.window_should_close():
 
         
         # Draw musical note label (High contrast!)
-        font_sz = max(9, int(13 * ui_scale))
+        font_sz = max(11, int(18 * ui_scale))
         lbl = wk["note"]
         lbl_w = measure_text_modern_width(lbl, font_sz)
         
@@ -1467,7 +1467,7 @@ while not pr.window_should_close():
         else:
             lbl_color = pr.Color(70, 70, 70, 255) # Dark charcoal
             
-        draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale + y_offset), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width / 2 - lbl_w // 2), int(rect.y + rect.height - 30 * ui_scale + y_offset), font_sz, lbl_color)
         
 
         
@@ -1536,7 +1536,7 @@ while not pr.window_should_close():
         pr.draw_line(int(rect.x + border_thickness), int(rect.y + y_offset), int(rect.x + rect.width - border_thickness), int(rect.y + y_offset), pr.Color(255, 255, 255, 30))
         
         # Draw key label (Premium Typography)
-        font_sz = max(7, int(9 * ui_scale))
+        font_sz = max(9, int(13 * ui_scale))
         lbl = bk["note"]
         lbl_w = measure_text_modern_width(lbl, font_sz)
         
@@ -1547,7 +1547,7 @@ while not pr.window_should_close():
         else:
             lbl_color = pr.Color(200, 200, 200, 255)
             
-        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 20 * ui_scale + y_offset), font_sz, lbl_color)
+        draw_text_modern(lbl, int(rect.x + rect.width // 2 - lbl_w // 2), int(rect.y + rect.height - 25 * ui_scale + y_offset), font_sz, lbl_color)
         
 
         
