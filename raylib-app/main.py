@@ -1598,7 +1598,8 @@ while not pr.window_should_close():
         stats_sz = int(18 * ui_scale)
         stats_w = measure_text_modern_width(stats_text, stats_sz)
         stats_x = sw - stats_w - 25
-        stats_y = int(top_height / 2 - stats_sz / 2)
+        # Shift stats_y slightly upwards to make room for the exit hint underneath
+        stats_y = int(top_height / 2 - stats_sz + 4 * ui_scale)
 
     # Responsive Visibility Rules
     show_subtitle = True
@@ -1642,43 +1643,58 @@ while not pr.window_should_close():
         
     # Draw Exit Countdown in both play modes if keys are held, otherwise draw the instructions hint
     if app_state != STATE_MENU:
-        # Determine the right-hand boundary for the exit hint (to avoid overlapping with stats)
         if has_stats:
-            right_boundary = stats_x - int(25 * ui_scale)
+            # Tutorial Mode: Stacked layout (Exit hint is a smaller sub-label below the stats)
+            if free_play_exit_timer > 0.0:
+                timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
+                timer_sz = int(16 * ui_scale)
+                timer_w = measure_text_modern_width(timer_text, timer_sz)
+                
+                pill_w = timer_w + int(16 * ui_scale)
+                pill_h = timer_sz + int(8 * ui_scale)
+                pill_x = sw - pill_w - 25
+                pill_y = int(top_height / 2 + 4 * ui_scale)
+                
+                timer_x = pill_x + int(8 * ui_scale)
+                timer_y = pill_y + int(4 * ui_scale)
+                
+                pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
+                pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
+                draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+            else:
+                hint_text = "Presiona C3 + A#5 para regresar"
+                hint_sz = int(12 * ui_scale)
+                hint_w = measure_text_modern_width(hint_text, hint_sz)
+                hint_x = sw - hint_w - 25
+                hint_y = int(top_height / 2 + 6 * ui_scale)
+                
+                draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(100, 116, 139, 255))
         else:
-            right_boundary = sw - 25
-            
-        if free_play_exit_timer > 0.0:
-            timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
-            timer_sz = int(22 * ui_scale)
-            timer_w = measure_text_modern_width(timer_text, timer_sz)
-            
-            # Calculate pill dimensions with scaling padding
-            pill_w = timer_w + int(24 * ui_scale)
-            pill_h = timer_sz + int(12 * ui_scale)
-            
-            # Position the pill relative to the calculated right boundary
-            pill_x = right_boundary - pill_w
-            pill_y = int(top_height / 2 - pill_h / 2)
-            
-            # Center the text inside the pill
-            timer_x = pill_x + int(12 * ui_scale)
-            timer_y = int(top_height / 2 - timer_sz / 2)
-            
-            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
-            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
-            draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
-        else:
-            hint_text = "Presiona C3 + A#5 para regresar"
-            hint_sz = int(18 * ui_scale)
-            hint_w = measure_text_modern_width(hint_text, hint_sz)
-            
-            # Position the text directly relative to the calculated right boundary
-            hint_x = right_boundary - hint_w
-            hint_y = int(top_height / 2 - hint_sz / 2)
-            
-            # Draw the text directly (Slate 500)
-            draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(100, 116, 139, 255))
+            # Free Play Mode: Centered layout (No stats, so vertically centered in the header)
+            if free_play_exit_timer > 0.0:
+                timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
+                timer_sz = int(22 * ui_scale)
+                timer_w = measure_text_modern_width(timer_text, timer_sz)
+                
+                pill_w = timer_w + int(24 * ui_scale)
+                pill_h = timer_sz + int(12 * ui_scale)
+                pill_x = sw - pill_w - 25
+                pill_y = int(top_height / 2 - pill_h / 2)
+                
+                timer_x = pill_x + int(12 * ui_scale)
+                timer_y = int(top_height / 2 - timer_sz / 2)
+                
+                pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(254, 226, 226, 255))
+                pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(248, 113, 113, 255))
+                draw_text_modern(timer_text, timer_x, timer_y, timer_sz, pr.Color(220, 38, 38, 255))
+            else:
+                hint_text = "Presiona C3 + A#5 para regresar"
+                hint_sz = int(18 * ui_scale)
+                hint_w = measure_text_modern_width(hint_text, hint_sz)
+                hint_x = sw - hint_w - 25
+                hint_y = int(top_height / 2 - hint_sz / 2)
+                
+                draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(100, 116, 139, 255))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
