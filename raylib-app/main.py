@@ -977,10 +977,13 @@ while not pr.window_should_close():
                     next_time = next_note["time"]
                     
             playback_time = next_time
-    elif app_state == STATE_FREE_PLAY and not in_countdown:
+    # 3. Exit Key Combo check (works in all active states: FREE_PLAY or TUTORIAL)
+    if app_state != STATE_MENU and not in_countdown:
         if pr.is_key_down(pr.KEY_A) and pr.is_key_down(pr.KEY_NINE):
             free_play_exit_timer += delta_time
             if free_play_exit_timer >= 5.0:
+                if app_state == STATE_TUTORIAL:
+                    stop_song_playback()
                 clear_all_active_notes()
                 app_state = STATE_MENU
                 handle_song_change("none")
@@ -1637,8 +1640,14 @@ while not pr.window_should_close():
     if has_stats:
         draw_text_modern(stats_text, stats_x, stats_y, stats_sz, pr.Color(30, 30, 30, 255))
         
-    # Draw Exit Countdown in Free Play Mode if keys are held, otherwise draw the instructions hint
-    if app_state == STATE_FREE_PLAY:
+    # Draw Exit Countdown in both play modes if keys are held, otherwise draw the instructions hint
+    if app_state != STATE_MENU:
+        # Determine the right-hand boundary for the exit hint (to avoid overlapping with stats)
+        if has_stats:
+            right_boundary = stats_x - int(25 * ui_scale)
+        else:
+            right_boundary = sw - 25
+            
         if free_play_exit_timer > 0.0:
             timer_text = f"Regresando al menú en: {max(1, 5 - int(free_play_exit_timer))}s..."
             timer_sz = int(22 * ui_scale)
@@ -1648,8 +1657,8 @@ while not pr.window_should_close():
             pill_w = timer_w + int(24 * ui_scale)
             pill_h = timer_sz + int(12 * ui_scale)
             
-            # Position the pill with a margin of 25 pixels from the screen edge (matches GPiano's left margin)
-            pill_x = sw - pill_w - 25
+            # Position the pill relative to the calculated right boundary
+            pill_x = right_boundary - pill_w
             pill_y = int(top_height / 2 - pill_h / 2)
             
             # Center the text inside the pill
@@ -1664,8 +1673,8 @@ while not pr.window_should_close():
             hint_sz = int(18 * ui_scale)
             hint_w = measure_text_modern_width(hint_text, hint_sz)
             
-            # Position the text directly with a margin of 25 pixels from the screen edge
-            hint_x = sw - hint_w - 25
+            # Position the text directly relative to the calculated right boundary
+            hint_x = right_boundary - hint_w
             hint_y = int(top_height / 2 - hint_sz / 2)
             
             # Draw the text directly (Slate 500)
