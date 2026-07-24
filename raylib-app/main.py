@@ -1312,6 +1312,7 @@ while not pr.window_should_close():
             line_height = int(round(24.0 * ui_scale * scale_factor))
             
             for line_idx, line in enumerate(lines):
+                lw = measure_text_modern_width(line, opt_sz)
                 draw_text_modern(line, note_cx - lw // 2, text_start_y + line_idx * line_height, opt_sz, text_color)
                 
             # Draw D3 Accept hint on the active center card
