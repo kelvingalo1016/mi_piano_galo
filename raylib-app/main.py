@@ -1664,24 +1664,12 @@ while not pr.window_should_close():
             hint_sz = int(14 * ui_scale)
             hint_w = measure_text_modern_width(hint_text, hint_sz)
             
-            # Calculate pill dimensions with scaling padding
-            pill_w = hint_w + int(24 * ui_scale)
-            pill_h = hint_sz + int(12 * ui_scale)
-            
-            # Position the pill with a margin of 25 pixels from the screen edge
-            pill_x = sw - pill_w - 25
-            pill_y = int(top_height / 2 - pill_h / 2)
-            
-            # Center the text inside the pill
-            hint_x = pill_x + int(12 * ui_scale)
+            # Position the text directly with a margin of 25 pixels from the screen edge
+            hint_x = sw - hint_w - 25
             hint_y = int(top_height / 2 - hint_sz / 2)
             
-            # Slate premium pill
-            pr.draw_rectangle_rounded(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(241, 245, 249, 255)) # Slate 100
-            pr.draw_rectangle_rounded_lines(pr.Rectangle(pill_x, pill_y, pill_w, pill_h), 0.4, 4, pr.Color(203, 213, 225, 255)) # Slate 300
-            
-            # Text inside the pill (Slate 600)
-            draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(71, 85, 105, 255))
+            # Draw the text directly (Slate 500)
+            draw_text_modern(hint_text, hint_x, hint_y, hint_sz, pr.Color(100, 116, 139, 255))
 
     # --- Draw Celebration Overlay & Modal ---
     if show_celebration and show_modal:
