@@ -4,6 +4,8 @@ import subprocess
 import zipfile
 import math
 import urllib.request
+import threading
+import time
 
 def setup_fluidsynth():
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -400,11 +402,52 @@ def init_synth():
         print(f"Failed to initialize FluidSynth: {e}")
         return False
 
+audio_monitor_started = False
+audio_healed = False
+
+def auto_heal_audio_worker():
+    global audio_healed
+    if not sys.platform.startswith('linux'):
+        audio_healed = True
+        return
+        
+    print("Auto-audio monitor started: monitoring HDMI audio vs Dummy Output...")
+    # Monitor for up to 60 seconds (20 iterations x 3s)
+    for _ in range(20):
+        if audio_healed:
+            break
+        try:
+            res = subprocess.check_output(["wpctl", "status"], text=True, stderr=subprocess.DEVNULL)
+            # If Dummy Output is active while physical audio exists
+            if "Dummy Output" in res and "Built-in Audio" in res:
+                print("Dummy Output detected during boot. Auto-healing WirePlumber...")
+                subprocess.run(["systemctl", "--user", "restart", "wireplumber"], check=False)
+                time.sleep(1.5)
+                init_synth()
+                init_raylib_audio()
+            elif "Dummy Output" not in res and "Built-in Audio" in res:
+                print("HDMI audio is confirmed active and healthy.")
+                audio_healed = True
+                break
+        except Exception as e:
+            print("Audio monitor error:", e)
+        time.sleep(3.0)
+    audio_healed = True
+    print("Auto-audio monitor completed.")
+
+def start_audio_monitor():
+    global audio_monitor_started
+    if not audio_monitor_started and sys.platform.startswith('linux'):
+        audio_monitor_started = True
+        t = threading.Thread(target=auto_heal_audio_worker, daemon=True)
+        t.start()
+
 def load_samples_tick():
     global loading_progress
     if loading_progress >= 1:
         return True
     init_synth()
+    start_audio_monitor()
     loading_progress = len(PIANO_KEYS)
     return True
 
