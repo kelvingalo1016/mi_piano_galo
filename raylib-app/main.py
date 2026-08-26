@@ -131,19 +131,19 @@ SELECT_SOUND_PATH = os.path.join(SCRIPT_DIR, "sonidos", "seleccion_opcion_sonido
 click_sound = None
 select_sound = None
 
-if os.path.exists(CLICK_SOUND_PATH):
+def init_raylib_audio():
+    global click_sound, select_sound
     try:
-        click_sound = pr.load_sound(CLICK_SOUND_PATH)
-        print("Loaded click navigation sound successfully.")
+        if os.path.exists(CLICK_SOUND_PATH):
+            click_sound = pr.load_sound(CLICK_SOUND_PATH)
+            print("Loaded click navigation sound successfully.")
+        if os.path.exists(SELECT_SOUND_PATH):
+            select_sound = pr.load_sound(SELECT_SOUND_PATH)
+            print("Loaded selection sound successfully.")
     except Exception as e:
-        print("Failed to load click navigation sound:", e)
+        print("Raylib audio effects load info:", e)
 
-if os.path.exists(SELECT_SOUND_PATH):
-    try:
-        select_sound = pr.load_sound(SELECT_SOUND_PATH)
-        print("Loaded selection sound successfully.")
-    except Exception as e:
-        print("Failed to load selection sound:", e)
+init_raylib_audio()
 
 
 # Modern Font Downloader and Loader
@@ -355,16 +355,22 @@ fs_synth = None
 sf_id = -1
 loading_progress = 0
 
-def load_samples_tick():
-    global loading_progress, fs_synth, sf_id
-    if loading_progress >= 1:
-        return True
-        
-    print("Initializing FluidSynth...")
+def init_synth():
+    global fs_synth, sf_id
+    print("Initializing/Restarting FluidSynth audio engine...")
     try:
+        if fs_synth:
+            try:
+                fs_synth.delete()
+            except Exception:
+                pass
+            fs_synth = None
+            sf_id = -1
+            
         fs_synth = fluidsynth.Synth(gain=0.8)
         if sys.platform.startswith('linux'):
-            drivers = ['pulseaudio', 'alsa', 'pipewire', 'jack']
+            # Prioritize pulseaudio and pipewire for seamless reconnection on Raspberry Pi OS Bookworm
+            drivers = ['pulseaudio', 'pipewire', 'alsa', 'jack']
             success = False
             for driver in drivers:
                 try:
@@ -376,22 +382,29 @@ def load_samples_tick():
                 except Exception as driver_err:
                     print(f"Failed to start with driver {driver}: {driver_err}")
             if not success:
-                print("Failed to start FluidSynth with specific drivers, trying default start...")
+                print("Starting FluidSynth with default driver...")
                 fs_synth.start()
         else:
             fs_synth.start()
         
         sf2_path = os.path.join(SCRIPT_DIR, "TimGM6mb.sf2")
-        print(f"Loading SoundFont: {sf2_path}")
         sf_id = fs_synth.sfload(sf2_path)
         if sf_id != -1:
             fs_synth.program_select(0, sf_id, 0, 0)
             print("FluidSynth initialized and SoundFont loaded successfully.")
+            return True
         else:
             print("Failed to load SoundFont.")
+            return False
     except Exception as e:
         print(f"Failed to initialize FluidSynth: {e}")
-        
+        return False
+
+def load_samples_tick():
+    global loading_progress
+    if loading_progress >= 1:
+        return True
+    init_synth()
     loading_progress = len(PIANO_KEYS)
     return True
 
@@ -898,6 +911,19 @@ while not pr.window_should_close():
         
     # ------------------ GAMEPLAY PHASE ------------------
     
+    # Auto-recover fullscreen and audio on display reconnection (HDMI hotplug)
+    if pr.is_window_resized():
+        if not pr.is_window_fullscreen():
+            pr.toggle_fullscreen()
+        if sys.platform.startswith('linux'):
+            print("Display resized/reconnected: refreshing audio engine...")
+            init_synth()
+
+    # Manual shortcut to recover audio if needed (F5)
+    if pr.is_key_pressed(pr.KEY_F5):
+        print("Manual audio reset triggered (F5)...")
+        init_synth()
+
     # 1. Update Fanfare and Rainbow Cascades (Celebration)
     now_time = pr.get_time()
     

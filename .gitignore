@@ -17,8 +17,9 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Python & Binaries
+__pycache__/
+*.py[cod]
+*$py.class
+raylib-app/bin/
+*.sf2
